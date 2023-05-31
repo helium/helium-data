@@ -5,7 +5,7 @@ use deltalake::{
     arrow::{
         array::{
             Array, ArrayBuilder, ArrayData, ArrayRef, BinaryBuilder, BooleanBuilder, BufferBuilder,
-            Date32Array, Decimal128Array, GenericListArray, ListBuilder, PrimitiveBuilder,
+            Date32Array, Decimal128Array, GenericListArray, PrimitiveBuilder,
             StringBuilder, StructArray,
         },
         datatypes::{ArrowPrimitiveType, DataType, Float32Type, Float64Type, Int32Type, Int64Type},
@@ -23,30 +23,6 @@ use super::get_delta_schema;
 
 trait ReflectBuilder: ArrayBuilder {
     fn append_value(&mut self, v: Option<ReflectValueRef>) -> ();
-}
-
-trait ReflectListBuilder {
-    fn append(&mut self, is_valid: bool);
-    fn finish(&mut self) -> GenericListArray<i32>;
-}
-
-struct ReflectListBuilderWrapper<T: ArrayBuilder> {
-    pub builder: ListBuilder<T>,
-}
-
-impl<T: ArrayBuilder> ReflectListBuilder for ReflectListBuilderWrapper<T> {
-    /// Finish the current variable-length list array slot
-    ///
-    /// # Panics
-    ///
-    /// Panics if the length of [`Self::values`] exceeds `OffsetSize::MAX`
-    fn append(&mut self, is_valid: bool) {
-        self.builder.append(is_valid)
-    }
-
-    fn finish(&mut self) -> GenericListArray<i32> {
-        self.builder.finish()
-    }
 }
 
 macro_rules! make_builder_wrapper {
