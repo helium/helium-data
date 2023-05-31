@@ -3794,6 +3794,7 @@ dependencies = [
 name = "protobuf-delta-lake-sink"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "async-compression",
  "aws-credential-types 0.55.3",
  "aws-sdk-s3 0.28.0",

@@ -12,7 +12,6 @@ pub use store::*;
 
 use crate::proto::{get_delta_schema, get_descriptor, to_record_batch};
 
-pub mod error;
 pub mod proto;
 pub mod store;
 

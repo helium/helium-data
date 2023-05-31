@@ -2,8 +2,8 @@ use bytes::BytesMut;
 use file_store::Settings;
 use lazy_static::lazy_static;
 use regex::Regex;
+use anyhow::{Result, Error};
 
-use crate::error::{Error, Result};
 use aws_sdk_s3::{config::Region, primitives::ByteStream, Client, Config};
 use chrono::NaiveDateTime;
 use futures::{
@@ -148,7 +148,7 @@ impl AwsStore {
             }
             Err(err) => {
                 println!("Error: {:?}", err);
-                stream::once(async move { Err(Error::s3_error(err)) }).boxed()
+                stream::once(async move { Err(err.into()) }).boxed()
             }
         })
         .boxed()
@@ -182,8 +182,7 @@ fn stream_source(stream: ByteStream) -> BytesMutStream {
         FramedRead::new(
             GzipDecoder::new(StreamReader::new(stream)),
             LengthDelimitedCodec::new(),
-        )
-        .map_err(Error::from),
+        ).map_err(|err| err.into())
     )
 }
 
@@ -197,7 +196,7 @@ where
         .key(key)
         .send()
         .map_ok(|output| output.body)
-        .map_err(Error::s3_error)
+        .map_err(Error::from)
         .fuse()
         .await
 }
