@@ -1,10 +1,10 @@
 use bytes::BytesMut;
-use file_store::{FileInfo, Settings};
+use file_store::Settings;
 use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::error::{Error, Result};
-use aws_sdk_s3::{config::Region, endpoint, primitives::ByteStream, Client, Config};
+use aws_sdk_s3::{config::Region, primitives::ByteStream, Client, Config};
 use chrono::NaiveDateTime;
 use futures::{
     stream::{self, BoxStream, StreamExt},

@@ -1,21 +1,15 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+#![feature(trait_upcasting)]
+#![allow(incomplete_features)]
+
+use std::collections::HashMap;
 
 use clap::Parser;
 use deltalake::{
-    arrow::ipc::RecordBatch,
     writer::{DeltaWriter, RecordBatchWriter},
-    DeltaOps, DeltaTableBuilder, DeltaTableError, SchemaDataType, SchemaField,
+    DeltaOps, DeltaTableBuilder, DeltaTableError,
 };
-use file_store::{
-    file_source, iot_beacon_report::IotBeaconReport, FileInfoStream, FileStore, FileType, Settings,
-    Stream,
-};
-use futures::stream::{self, StreamExt};
-use helium_proto::services::poc_lora::LoraBeaconIngestReportV1;
+use file_store::Settings;
+use futures::stream::StreamExt;
 use protobuf::CodedInputStream;
 pub use store::*;
 
@@ -81,10 +75,7 @@ async fn main() {
     let args = Args::parse();
 
     let descriptor = get_descriptor(args.source_protos, args.source_proto_name).await;
-    let delta_schema = get_delta_schema(
-        descriptor.clone(),
-        args.partition_timestamp_column.is_some(),
-    );
+    let delta_schema = get_delta_schema(&descriptor, args.partition_timestamp_column.is_some());
 
     let file_store = AwsStore::from_settings(&Settings {
         bucket: args.source_bucket.clone(),
@@ -160,102 +151,3 @@ async fn main() {
         .await
         .expect("Failed to flush write");
 }
-
-// #[derive(Clone, Debug)]
-// pub struct IotBeaconReport {
-//     pub pub_key: PublicKeyBinary,
-//     pub local_entropy: Vec<u8>,
-//     pub remote_entropy: Vec<u8>,
-//     pub data: Vec<u8>,
-//     pub frequency: u64,
-//     pub channel: i32,
-//     pub datarate: DataRate,
-//     pub tx_power: i32,
-//     pub timestamp: DateTime<Utc>,
-//     pub signature: Vec<u8>,
-//     pub tmst: u32,
-// }
-
-// fn file_type_to_schema(file_type: FileType) -> Vec<SchemaField> {
-//     match file_type {
-//         FileType::IotBeaconIngestReport => {
-//             LoraBeaconIngestReportV1::default().descriptor();
-
-//             vec![
-//                 SchemaField::new(
-//                     "received_timestamp".to_string(),
-//                     SchemaDataType::primitive("timestamp".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "pubkey".to_string(),
-//                     SchemaDataType::primitive("binary".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "local_entropy".to_string(),
-//                     SchemaDataType::primitive("binary".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "remote_entropy".to_string(),
-//                     SchemaDataType::primitive("binary".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "data".to_string(),
-//                     SchemaDataType::primitive("binary".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "frequency".to_string(),
-//                     SchemaDataType::primitive("decimal(23,0)".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "channel".to_string(),
-//                     SchemaDataType::primitive("integer".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "datarate".to_string(),
-//                     SchemaDataType::primitive("integer".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "tx_power".to_string(),
-//                     SchemaDataType::primitive("integer".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "timestamp".to_string(),
-//                     SchemaDataType::primitive("timestamp".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "signature".to_string(),
-//                     SchemaDataType::primitive("binary".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//                 SchemaField::new(
-//                     "tmst".to_string(),
-//                     SchemaDataType::primitive("integer".to_string()),
-//                     true,
-//                     HashMap::new(),
-//                 ),
-//             ]
-//         }
-//         _ => vec![],
-//     }
-// }
