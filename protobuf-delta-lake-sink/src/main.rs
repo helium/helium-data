@@ -78,18 +78,6 @@ async fn main() {
     let descriptor = &get_descriptor(args.source_protos, args.source_proto_name).await;
     let delta_schema = get_delta_schema(&descriptor, args.partition_timestamp_column.is_some());
 
-    let file_store = AwsStore::from_settings(&Settings {
-        bucket: args.source_bucket.clone(),
-        endpoint: args.source_endpoint,
-        region: args.source_region,
-        access_key_id: args.source_access_key_id,
-        secret_access_key: args.source_secret_access_key,
-    });
-
-    let file_infos = file_store.list(args.source_filter);
-
-    let file_stream = file_store.source(file_infos);
-
     let mut s3_config =
         HashMap::from([("aws_default_region".to_string(), args.target_region.clone())]);
     if let Some(aws_secret_key_id) = args.target_secret_access_key {
@@ -129,7 +117,18 @@ async fn main() {
     let mut writer =
         RecordBatchWriter::for_table(&table).expect("Failed to make RecordBatchWriter");
 
-    let partition_timestamp_column = &args.partition_timestamp_column;
+    
+    let file_store = AwsStore::from_settings(&Settings {
+        bucket: args.source_bucket.clone(),
+        endpoint: args.source_endpoint,
+        region: args.source_region,
+        access_key_id: args.source_access_key_id,
+        secret_access_key: args.source_secret_access_key,
+    });
+
+    let file_infos = file_store.list(args.source_filter);
+    let file_stream = file_store.source(file_infos);
+
     let mut chunked_stream = file_stream.chunks(args.max_records);
     while let Some(item) = chunked_stream.next().await {
         let messages = item
@@ -145,7 +144,7 @@ async fn main() {
             delta_schema,
             descriptor.clone(),
             messages.iter().map(|m| m.as_ref()).collect(),
-            partition_timestamp_column.clone(),
+            args.partition_timestamp_column.clone(),
         );
 
         writer.write(batch).await.expect("Failed to write");
