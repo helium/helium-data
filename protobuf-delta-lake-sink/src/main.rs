@@ -1,6 +1,3 @@
-#![feature(trait_upcasting)]
-#![allow(incomplete_features)]
-
 use std::collections::HashMap;
 
 use clap::Parser;
@@ -67,6 +64,10 @@ struct Args {
     pub target_access_key_id: Option<String>,
     #[clap(long)]
     pub target_secret_access_key: Option<String>,
+
+    /// Maximum number of records to write at a time. Controls the size of outputted parquet files, and memory usage.
+    #[clap(long, default_value = "1000000")]
+    pub max_records: usize,
 }
 
 #[tokio::main]
@@ -74,7 +75,7 @@ async fn main() {
     use clap::Parser;
     let args = Args::parse();
 
-    let descriptor = get_descriptor(args.source_protos, args.source_proto_name).await;
+    let descriptor = &get_descriptor(args.source_protos, args.source_proto_name).await;
     let delta_schema = get_delta_schema(&descriptor, args.partition_timestamp_column.is_some());
 
     let file_store = AwsStore::from_settings(&Settings {
@@ -123,28 +124,32 @@ async fn main() {
         }
         Err(err) => Err(err).unwrap(),
     };
+    let delta_schema = table.get_schema().expect("No schema");
 
     let mut writer =
         RecordBatchWriter::for_table(&table).expect("Failed to make RecordBatchWriter");
 
-    let records_bytes = file_stream.collect::<Vec<_>>().await;
-    let messages = records_bytes
-        .iter()
-        .map(|result| {
-            let bytes = result.as_ref().expect("Failed to get bytes");
-            descriptor
-                .parse_from(&mut CodedInputStream::from_bytes(bytes.as_ref()))
-                .expect("Failed to decode message")
-        })
-        .collect::<Vec<_>>();
-    let batch = to_record_batch(
-        table.get_schema().expect("No schema"),
-        descriptor,
-        messages.iter().map(|m| m.as_ref()).collect(),
-        args.partition_timestamp_column,
-    );
+    let partition_timestamp_column = &args.partition_timestamp_column;
+    let mut chunked_stream = file_stream.chunks(args.max_records);
+    while let Some(item) = chunked_stream.next().await {
+        let messages = item
+            .iter()
+            .map(|result| {
+                let bytes = result.as_ref().expect("Failed to get bytes");
+                descriptor
+                    .parse_from(&mut CodedInputStream::from_bytes(bytes.as_ref()))
+                    .expect("Failed to decode message")
+            })
+            .collect::<Vec<_>>();
+        let batch = to_record_batch(
+            delta_schema,
+            descriptor.clone(),
+            messages.iter().map(|m| m.as_ref()).collect(),
+            partition_timestamp_column.clone(),
+        );
 
-    writer.write(batch).await.expect("Failed to write");
+        writer.write(batch).await.expect("Failed to write");
+    }
 
     writer
         .flush_and_commit(&mut table)

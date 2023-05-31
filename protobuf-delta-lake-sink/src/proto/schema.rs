@@ -47,7 +47,7 @@ pub async fn get_descriptor(proto_urls: Vec<String>, proto_name: String) -> Mess
     file_descriptors
         .iter()
         .find_map(|f| f.message_by_package_relative_name(proto_name.as_str()))
-        .expect("Message type not found")
+        .expect(format!("Message type not found {}", proto_name).as_str())
 }
 
 pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> SchemaField {

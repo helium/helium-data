@@ -1,7 +1,6 @@
-use std::ops::Deref;
 use std::{any::Any, sync::Arc};
 
-use deltalake::arrow::datatypes::Fields;
+use deltalake::arrow::datatypes::{Field, Fields};
 use deltalake::{
     arrow::{
         array::{
@@ -14,7 +13,7 @@ use deltalake::{
     },
     Schema, SchemaTypeStruct,
 };
-use protobuf::reflect::EnumDescriptor;
+use protobuf::reflect::{EnumDescriptor, ReflectValueBox};
 use protobuf::{
     reflect::{FieldDescriptor, MessageDescriptor, ReflectValueRef, RuntimeType},
     MessageDyn,
@@ -275,7 +274,7 @@ impl ArrayBuilder for U64ReflectBuilder {
     }
 
     fn into_box_any(self: Box<Self>) -> Box<dyn Any> {
-        todo!()
+        self
     }
 }
 
@@ -341,7 +340,7 @@ impl ArrayBuilder for StructReflectBuilder {
     }
 
     fn finish_cloned(&self) -> ArrayRef {
-        todo!()
+        panic!("Not implemented")
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -368,22 +367,20 @@ impl StructReflectBuilder {
     }
 }
 
-// impl ReflectArrayBuilder for StructReflectBuilder {}
-
 impl ReflectBuilder for StructReflectBuilder {
     fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
         let message_ref = v
             .map(|i| i.to_message().expect("Not a message"))
             .expect("Messages can't be none");
-        let message = message_ref.deref();
+        let message = &*message_ref;
         for (index, field) in self.descriptor.fields().enumerate() {
             match field.runtime_field_type() {
                 protobuf::reflect::RuntimeFieldType::Singular(_) => {
                     let builder = self.builders.get_mut(index).unwrap();
                     builder.append_value(field.get_singular(message))
                 }
-                protobuf::reflect::RuntimeFieldType::Repeated(_) => todo!(),
-                protobuf::reflect::RuntimeFieldType::Map(_, _) => todo!(),
+                protobuf::reflect::RuntimeFieldType::Repeated(_) => panic!("Repeated fields in a nested message are not supported"),
+                protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
             };
         }
     }
@@ -457,8 +454,8 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Box<dyn ReflectArrayBuilder>
                 .fields()
                 .map(|field| match field.runtime_field_type() {
                     protobuf::reflect::RuntimeFieldType::Singular(t) => get_builder(&t, capacity),
-                    protobuf::reflect::RuntimeFieldType::Repeated(_) => todo!(),
-                    protobuf::reflect::RuntimeFieldType::Map(_, _) => todo!(),
+                    protobuf::reflect::RuntimeFieldType::Repeated(_) => panic!("Repeated fields in a nested message are not supported"),
+                    protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
                 })
                 .collect::<Vec<Box<dyn ReflectArrayBuilder>>>();
             Box::new(StructReflectBuilder {
@@ -473,7 +470,7 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Box<dyn ReflectArrayBuilder>
 fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<dyn Array> {
     match f.runtime_field_type() {
         protobuf::reflect::RuntimeFieldType::Singular(t) => {
-            let mut builder: Box<dyn ReflectBuilder> = get_builder(&t, messages.len());
+            let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len());
 
             for message in messages.iter() {
                 builder.append_value(f.get_singular(*message));
@@ -482,7 +479,7 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<d
             Arc::new(builder.finish())
         }
         protobuf::reflect::RuntimeFieldType::Repeated(t) => {
-            let mut builder: Box<dyn ReflectBuilder> = get_builder(&t, messages.len());
+            let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len());
             let mut offsets = BufferBuilder::<i32>::new(messages.len() + 1);
 
             for message in messages.iter() {
@@ -493,7 +490,8 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<d
                     builder.append_value(Some(value));
                 }
             }
-            let data_type = runtime_type_to_data_type(&t);
+            let field = Arc::new(Field::new("item", runtime_type_to_data_type(&t), false));
+            let data_type = DataType::List(field);
             let values_arr = builder.finish();
             let values_data = values_arr.to_data();
             let array_data_builder = ArrayData::builder(data_type)
@@ -505,7 +503,7 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<d
 
             Arc::new(GenericListArray::<i32>::from(array_data))
         }
-        protobuf::reflect::RuntimeFieldType::Map(_, _) => todo!(),
+        protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
     }
 }
 
@@ -525,13 +523,15 @@ pub fn to_record_batch(
         .collect::<Vec<_>>();
 
     if let Some(partition_timestamp_column) = partition_timestamp_column {
-        let timestamp_field = descriptor
-            .field_by_name(partition_timestamp_column.as_str())
-            .expect(format!("No timestamp field {}", partition_timestamp_column).as_str());
-        let timestamps = messages.iter().map(|m| {
-            timestamp_field
-                .get_singular(*m)
-                .expect("No timestamp")
+        let field_refs: Vec<Option<ReflectValueBox>> = get_fields(
+            &descriptor,
+            messages,
+            &partition_timestamp_column.split(".").collect::<Vec<_>>(),
+        );
+        let timestamps = field_refs.into_iter().map(|field| {
+            field
+                .expect("Null timestamp")
+                .as_value_ref()
                 .to_u64()
                 .expect("Not a u64")
         });
@@ -544,4 +544,41 @@ pub fn to_record_batch(
         arrow.push(date_data);
     }
     RecordBatch::try_new(Arc::new(arrow_schema), arrow).expect("Failed to create record batch")
+}
+
+/// Recursively get field at path
+fn get_field(
+    descriptor: &MessageDescriptor,
+    message: &dyn MessageDyn,
+    path: &[&str],
+) -> Option<ReflectValueBox> {
+    let field_descriptor = descriptor.field_by_name(path[0]).expect("Field not found");
+    let value: Option<ReflectValueBox> = field_descriptor.get_singular(message).map(|i| i.to_box());
+    if path.len() != 1 {
+        if let Some(val) = value {
+            match field_descriptor.runtime_field_type() {
+                protobuf::reflect::RuntimeFieldType::Singular(m) => match m {
+                    RuntimeType::Message(m) => {
+                        let sub_msg = val.as_value_ref().to_message().expect("Not a message");
+                        return get_field(&m, &*sub_msg, &path[1..].to_vec());
+                    }
+                    _ => panic!("Field is not a message"),
+                },
+                _ => panic!("Cannot get field by path from a non-singular field"),
+            }
+        }
+    }
+
+    value
+}
+
+fn get_fields<'a>(
+    descriptor: &MessageDescriptor,
+    messages: Vec<&'a dyn MessageDyn>,
+    path: &[&str],
+) -> Vec<Option<ReflectValueBox>> {
+    messages
+        .iter()
+        .map(|m| get_field(descriptor, *m, path))
+        .collect::<Vec<_>>()
 }

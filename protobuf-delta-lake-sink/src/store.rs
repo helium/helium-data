@@ -14,7 +14,7 @@ use std::str::FromStr;
 
 pub type Stream<T> = BoxStream<'static, Result<T>>;
 pub type BytesMutStream = Stream<BytesMut>;
-pub type FileInfoStream = Stream<(String, i64)>;
+pub type FileInfoStream = Stream<FileInfo>;
 
 #[derive(Debug, clap::Args)]
 pub struct FileFilter {
@@ -69,6 +69,12 @@ pub struct AwsStore {
     pub client: Client,
 }
 
+pub struct FileInfo {
+    pub key: String,
+    pub timestamp: i64,
+    pub size: i64,
+}
+
 impl AwsStore {
     pub fn from_settings(settings: &Settings) -> AwsStore {
         AwsStore {
@@ -77,7 +83,7 @@ impl AwsStore {
         }
     }
 
-    pub fn list(&self, file_filter: FileFilter) -> Stream<(String, i64)> {
+    pub fn list(&self, file_filter: FileFilter) -> Stream<FileInfo> {
         let before = file_filter.before;
         let after = file_filter.after;
         let request = self
@@ -122,13 +128,21 @@ impl AwsStore {
                             let ts =
                                 i64::from_str(key.split(".").nth(1).unwrap_or_default()).unwrap();
 
-                            Some((key.to_string(), ts))
+                            Some(FileInfo {
+                                key: key.to_string(),
+                                timestamp: ts,
+                                size: obj.size(),
+                            })
                         } else {
                             None
                         }
                     })
-                    .filter(move |info| after.map_or(true, |v| info.1 > v.timestamp_millis()))
-                    .filter(move |info| before.map_or(true, |v| info.1 <= v.timestamp_millis()))
+                    .filter(move |info| {
+                        after.map_or(true, |v| info.timestamp > v.timestamp_millis())
+                    })
+                    .filter(move |info| {
+                        before.map_or(true, |v| info.timestamp <= v.timestamp_millis())
+                    })
                     .map(Ok);
                 stream::iter(filtered).boxed()
             }
@@ -146,7 +160,7 @@ impl AwsStore {
         let bucket = self.bucket.clone();
         let client = self.client.clone();
         infos
-            .map_ok(move |info| get_byte_stream(client.clone(), bucket.clone(), info.0))
+            .map_ok(move |info| get_byte_stream(client.clone(), bucket.clone(), info.key))
             .try_buffered(2)
             .flat_map(|stream| match stream {
                 Ok(stream) => stream_source(stream),
