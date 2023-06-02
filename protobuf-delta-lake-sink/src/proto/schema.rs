@@ -5,33 +5,36 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::{Context, Result};
 use deltalake::{SchemaDataType, SchemaField, SchemaTypeArray, SchemaTypeStruct};
 use futures::{stream, StreamExt};
 use protobuf::reflect::{FileDescriptor, MessageDescriptor, RuntimeType};
 use protobuf_parse::Parser;
 
-async fn fetch_and_write_file(url: String) -> Result<PathBuf, reqwest::Error> {
+async fn fetch_and_write_file(url: String) -> Result<PathBuf> {
     let response = reqwest::get(url.clone()).await?;
     let file_bytes = response.bytes().await?;
-    let file_path = Path::new(".").join(Path::new(url.clone().split("/").last().unwrap())); // Set the desired file path
+    let file_path =
+        Path::new(".").join(Path::new(url.clone().split("/").last().context("Bad url")?)); // Set the desired file path
 
-    let mut file = File::create(file_path.clone()).unwrap();
-    file.write_all(&file_bytes).unwrap();
+    let mut file = File::create(file_path.clone()).context("Failed to create file")?;
+    file.write_all(&file_bytes)?;
 
     Ok(file_path)
 }
+
 // All urls containing the proto we want and deps
-pub async fn get_descriptor(proto_urls: Vec<String>, proto_name: String) -> MessageDescriptor {
+pub async fn get_descriptor(
+    proto_urls: Vec<String>,
+    proto_name: String,
+) -> Result<MessageDescriptor> {
     let paths_raw = stream::iter(proto_urls)
         .map(|url| fetch_and_write_file(url))
         .buffer_unordered(2)
         .collect::<Vec<_>>()
         .await;
 
-    let paths: Vec<PathBuf> = paths_raw
-        .into_iter()
-        .map(|r| r.expect("Reqwest failed"))
-        .collect();
+    let paths: Vec<PathBuf> = paths_raw.into_iter().collect::<Result<Vec<_>>>()?;
 
     let mut parser = Parser::new();
     parser.include(Path::new("."));
@@ -40,14 +43,14 @@ pub async fn get_descriptor(proto_urls: Vec<String>, proto_name: String) -> Mess
     }
     let file_descriptor_set = parser
         .file_descriptor_set()
-        .expect("Failed to get descriptor set");
+        .context("Failed to get descriptor set")?;
     let file_descriptors = FileDescriptor::new_dynamic_fds(file_descriptor_set.file, &[])
-        .expect("Failed to construct descriptor");
+        .context("Failed to construct descriptor")?;
 
     file_descriptors
         .iter()
         .find_map(|f| f.message_by_package_relative_name(proto_name.as_str()))
-        .expect(format!("Message type not found {}", proto_name).as_str())
+        .context(format!("Message type not found {}", proto_name))
 }
 
 pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> SchemaField {

@@ -1,5 +1,4 @@
-use std::{any::Any, sync::Arc};
-
+use anyhow::{bail, Context, Result};
 use deltalake::arrow::array::StringArray;
 use deltalake::arrow::datatypes::{Field, Fields};
 use deltalake::{
@@ -19,6 +18,7 @@ use protobuf::{
     reflect::{FieldDescriptor, MessageDescriptor, ReflectValueRef, RuntimeType},
     MessageDyn,
 };
+use std::{any::Any, sync::Arc};
 
 use super::get_delta_schema;
 
@@ -69,7 +69,7 @@ make_builder_wrapper!(BinaryReflectBuilder, BinaryBuilder);
 make_builder_wrapper!(StringReflectBuilder, StringBuilder);
 
 impl ReflectBuilder for BinaryReflectBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| i.to_bytes().expect("Not bytes").to_vec())
                 .unwrap_or_default(),
@@ -78,7 +78,7 @@ impl ReflectBuilder for BinaryReflectBuilder {
 }
 
 impl ReflectBuilder for StringReflectBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| {
                 i.to_str()
@@ -91,7 +91,7 @@ impl ReflectBuilder for StringReflectBuilder {
 }
 
 impl ReflectBuilder for BoolReflectBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| i.to_bool().expect("Not a boolean"))
                 .unwrap_or_default(),
@@ -135,7 +135,7 @@ impl ArrayBuilder for EnumReflectBuilder {
 }
 
 impl ReflectBuilder for EnumReflectBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| {
                 self.enum_descriptor
@@ -183,7 +183,7 @@ impl<T: ArrowPrimitiveType> ArrayBuilder for PrimitiveReflectBuilder<T> {
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Int32Type> {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| i.to_i32().expect("Not an i32"))
                 .unwrap_or_default(),
@@ -192,7 +192,7 @@ impl ReflectBuilder for PrimitiveReflectBuilder<Int32Type> {
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Int64Type> {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| {
                 i.to_i64()
@@ -256,7 +256,7 @@ impl ArrayBuilder for U64ReflectBuilder {
 }
 
 impl ReflectBuilder for U64ReflectBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.values.push(
             v.map(|i| i.to_u64().expect("Not a u64"))
                 .unwrap_or_default(),
@@ -265,7 +265,7 @@ impl ReflectBuilder for U64ReflectBuilder {
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Float32Type> {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| i.to_f32().expect("Not a f32"))
                 .unwrap_or_default(),
@@ -274,7 +274,7 @@ impl ReflectBuilder for PrimitiveReflectBuilder<Float32Type> {
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Float64Type> {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         self.builder.append_value(
             v.map(|i| i.to_f64().expect("Not a f64"))
                 .unwrap_or_default(),
@@ -345,7 +345,7 @@ impl StructReflectBuilder {
 }
 
 impl ReflectBuilder for StructReflectBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> () {
+    fn append_value(&mut self, v: Option<ReflectValueRef>) {
         let message_ref = v
             .map(|i| i.to_message().expect("Not a message"))
             .expect("Messages can't be none");
@@ -394,8 +394,8 @@ trait ReflectArrayBuilder: ReflectBuilder + ArrayBuilder {}
 
 impl<T: ArrayBuilder + ReflectBuilder + ?Sized> ReflectArrayBuilder for T {}
 
-fn get_builder(t: &RuntimeType, capacity: usize) -> Box<dyn ReflectArrayBuilder> {
-    match t {
+fn get_builder(t: &RuntimeType, capacity: usize) -> Result<Box<dyn ReflectArrayBuilder>> {
+    Ok(match t {
         RuntimeType::I32 => Box::new(PrimitiveReflectBuilder::<Int32Type> {
             builder: PrimitiveBuilder::with_capacity(capacity),
         }),
@@ -428,34 +428,33 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Box<dyn ReflectArrayBuilder>
         RuntimeType::Message(m) => {
             let schema = Schema::new(get_delta_schema(m));
             let arrow_schema =
-                <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(&schema)
-                    .expect("Failed to get arrow schema from delta schema");
+                <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(&schema)?;
             let builders = m
                 .clone()
                 .fields()
                 .map(|field| match field.runtime_field_type() {
                     protobuf::reflect::RuntimeFieldType::Singular(t) => get_builder(&t, capacity),
                     protobuf::reflect::RuntimeFieldType::Repeated(_) => {
-                        panic!("Repeated fields in a nested message are not supported")
+                        bail!("Repeated fields in a nested message are not supported")
                     }
                     protobuf::reflect::RuntimeFieldType::Map(_, _) => {
-                        panic!("Map fields are not supported")
+                        bail!("Map fields are not supported")
                     }
                 })
-                .collect::<Vec<Box<dyn ReflectArrayBuilder>>>();
+                .collect::<Result<Vec<Box<dyn ReflectArrayBuilder>>>>()?;
             Box::new(StructReflectBuilder {
                 fields: arrow_schema.fields,
                 builders: builders,
                 descriptor: m.clone(),
             })
         }
-    }
+    })
 }
 
-fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<dyn Array> {
-    match f.runtime_field_type() {
+fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Result<Arc<dyn Array>> {
+    Ok(match f.runtime_field_type() {
         protobuf::reflect::RuntimeFieldType::Singular(t) => {
-            let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len());
+            let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len())?;
 
             for message in messages.iter() {
                 builder.append_value(f.get_singular(*message));
@@ -464,7 +463,7 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<d
             Arc::new(builder.finish())
         }
         protobuf::reflect::RuntimeFieldType::Repeated(t) => {
-            let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len());
+            let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len())?;
             let mut offsets = BufferBuilder::<i32>::new(messages.len() + 1);
 
             for message in messages.iter() {
@@ -489,7 +488,7 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<d
             Arc::new(GenericListArray::<i32>::from(array_data))
         }
         protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
-    }
+    })
 }
 
 pub fn to_record_batch(
@@ -498,43 +497,41 @@ pub fn to_record_batch(
     // Tuple of file name and message
     messages_with_files: Vec<(&str, &dyn MessageDyn)>,
     partition_timestamp_column: Option<String>,
-) -> RecordBatch {
+) -> Result<RecordBatch> {
     let messages = messages_with_files.iter().map(|m| m.1).collect::<Vec<_>>();
     let files = messages_with_files.iter().map(|m| m.0).collect::<Vec<_>>();
     let fields = descriptor.fields();
     let arrow_schema =
-        <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(delta_schema)
-            .expect("Failed to get arrow schema from delta schema");
+        <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(delta_schema)?;
     println!("Batching {} messages", messages.len());
     let mut arrow = fields
         .map(|f| field_to_arrow(&f, &messages))
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>>>()?;
 
     if let Some(partition_timestamp_column) = partition_timestamp_column {
-        let field_refs: Vec<Option<ReflectValueBox>> = get_fields(
+        let field_refs: Vec<Result<ReflectValueBox>> = get_fields(
             &descriptor,
             messages,
             &partition_timestamp_column.split(".").collect::<Vec<_>>(),
         );
         let timestamps = field_refs.into_iter().map(|field| {
             field
-                .expect("Null timestamp")
+                .context("Timestamp not found")?
                 .as_value_ref()
                 .to_u64()
-                .expect("Not a u64")
+                .context("Not a u64")
         });
-        let date_data: Arc<dyn Array> = Arc::new(Date32Array::from(
-            timestamps
-                .map(|t| i32::try_from(t / (1000 * 60 * 60 * 24)).expect("Not a valid i32"))
-                .collect::<Vec<i32>>(),
-        ));
+        let dates = timestamps
+            .map(|t| i32::try_from(t? / (1000 * 60 * 60 * 24)).context("Not an int32"))
+            .collect::<Result<Vec<i32>>>()?;
+        let date_data: Arc<dyn Array> = Arc::new(Date32Array::from(dates));
 
         arrow.push(date_data);
 
         let file_data: Arc<dyn Array> = Arc::new(StringArray::from(files));
         arrow.push(file_data);
     }
-    RecordBatch::try_new(Arc::new(arrow_schema), arrow).expect("Failed to create record batch")
+    RecordBatch::try_new(Arc::new(arrow_schema), arrow).context("Failed to create record batch")
 }
 
 /// Recursively get field at path
@@ -542,32 +539,34 @@ fn get_field(
     descriptor: &MessageDescriptor,
     message: &dyn MessageDyn,
     path: &[&str],
-) -> Option<ReflectValueBox> {
-    let field_descriptor = descriptor.field_by_name(path[0]).expect("Field not found");
+) -> Result<ReflectValueBox> {
+    let field_descriptor = descriptor
+        .field_by_name(path[0])
+        .context("Field not found")?;
     let value: Option<ReflectValueBox> = field_descriptor.get_singular(message).map(|i| i.to_box());
     if path.len() != 1 {
         if let Some(val) = value {
             match field_descriptor.runtime_field_type() {
                 protobuf::reflect::RuntimeFieldType::Singular(m) => match m {
                     RuntimeType::Message(m) => {
-                        let sub_msg = val.as_value_ref().to_message().expect("Not a message");
+                        let sub_msg = val.as_value_ref().to_message().context("Not a message")?;
                         return get_field(&m, &*sub_msg, &path[1..].to_vec());
                     }
-                    _ => panic!("Field is not a message"),
+                    _ => bail!("Field is not a message"),
                 },
-                _ => panic!("Cannot get field by path from a non-singular field"),
+                _ => bail!("Cannot get field by path from a non-singular field"),
             }
         }
     }
 
-    value
+    value.context("No value at path")
 }
 
 fn get_fields<'a>(
     descriptor: &MessageDescriptor,
     messages: Vec<&'a dyn MessageDyn>,
     path: &[&str],
-) -> Vec<Option<ReflectValueBox>> {
+) -> Vec<Result<ReflectValueBox>> {
     messages
         .iter()
         .map(|m| get_field(descriptor, *m, path))

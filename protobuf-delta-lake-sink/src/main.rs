@@ -1,15 +1,11 @@
 use anyhow::{Context, Result};
-use std::{
-    collections::{HashMap},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
-use chrono::{NaiveDateTime};
+use chrono::NaiveDateTime;
 use clap::Parser;
+use datafusion::arrow::array::StringArray;
 use deltalake::{
-    datafusion::{
-        prelude::SessionContext,
-    },
+    datafusion::prelude::SessionContext,
     writer::{DeltaWriter, RecordBatchWriter},
     DeltaOps, DeltaTable, DeltaTableBuilder, DeltaTableError, SchemaDataType, SchemaField,
 };
@@ -17,9 +13,6 @@ use file_store::Settings;
 use futures::stream::StreamExt;
 use protobuf::CodedInputStream;
 pub use store::*;
-use datafusion::{
-    arrow::array::StringArray,
-};
 
 use crate::proto::{get_delta_schema, get_descriptor, to_record_batch};
 
@@ -92,7 +85,7 @@ async fn main() -> Result<()> {
     use clap::Parser;
     let args = Args::parse();
 
-    let descriptor = &get_descriptor(args.source_protos, args.source_proto_name).await;
+    let descriptor = &get_descriptor(args.source_protos, args.source_proto_name).await?;
     let mut delta_schema = get_delta_schema(&descriptor);
     if args.partition_timestamp_column.is_some() {
         let date_field = SchemaField::new(
@@ -207,7 +200,7 @@ async fn main() -> Result<()> {
                 .map(|m| (m.0.as_str(), m.1.as_ref()))
                 .collect(),
             args.partition_timestamp_column.clone(),
-        );
+        )?;
 
         writer.write(batch).await?
     }
