@@ -1,14 +1,25 @@
-use std::collections::HashMap;
+use anyhow::{Context, Result};
+use std::{
+    collections::{HashMap},
+    sync::Arc,
+};
 
+use chrono::{NaiveDateTime};
 use clap::Parser;
 use deltalake::{
+    datafusion::{
+        prelude::SessionContext,
+    },
     writer::{DeltaWriter, RecordBatchWriter},
-    DeltaOps, DeltaTableBuilder, DeltaTableError,
+    DeltaOps, DeltaTable, DeltaTableBuilder, DeltaTableError, SchemaDataType, SchemaField,
 };
 use file_store::Settings;
 use futures::stream::StreamExt;
 use protobuf::CodedInputStream;
 pub use store::*;
+use datafusion::{
+    arrow::array::StringArray,
+};
 
 use crate::proto::{get_delta_schema, get_descriptor, to_record_batch};
 
@@ -69,13 +80,35 @@ struct Args {
     pub max_records: usize,
 }
 
+fn create_session(table: DeltaTable) -> Result<SessionContext> {
+    let session = SessionContext::new();
+    session.register_table("proto_table", Arc::new(table))?;
+
+    Ok(session)
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     use clap::Parser;
     let args = Args::parse();
 
     let descriptor = &get_descriptor(args.source_protos, args.source_proto_name).await;
-    let delta_schema = get_delta_schema(&descriptor, args.partition_timestamp_column.is_some());
+    let mut delta_schema = get_delta_schema(&descriptor);
+    if args.partition_timestamp_column.is_some() {
+        let date_field = SchemaField::new(
+            "date".to_string(),
+            SchemaDataType::primitive("date".to_string()),
+            false,
+            HashMap::new(),
+        );
+        delta_schema.push(date_field);
+    }
+    delta_schema.push(SchemaField::new(
+        "file".to_string(),
+        SchemaDataType::primitive("string".to_string()),
+        false,
+        HashMap::new(),
+    ));
 
     let mut s3_config =
         HashMap::from([("aws_default_region".to_string(), args.target_region.clone())]);
@@ -91,10 +124,9 @@ async fn main() {
     }
 
     let uri = format!("s3://{}/{}", args.target_bucket, args.target_table);
-    let mut table_raw = DeltaTableBuilder::from_uri(uri)
-        .with_storage_options(s3_config)
-        .build()
-        .unwrap();
+    let mut table_raw = DeltaTableBuilder::from_uri(uri.clone())
+        .with_storage_options(s3_config.clone())
+        .build()?;
 
     let maybe_table = table_raw.load().await;
 
@@ -106,17 +138,43 @@ async fn main() {
                 .create()
                 .with_columns(delta_schema)
                 .with_partition_columns(vec!["date"])
-                .await
-                .unwrap()
+                .await?
         }
-        Err(err) => Err(err).unwrap(),
+        Err(err) => Err(err)?,
     };
+    let mut source_filter = args.source_filter;
     let delta_schema = table.get_schema().expect("No schema");
+    if source_filter.after.is_none() && args.partition_timestamp_column.is_some() {
+        let mut read_table = DeltaTableBuilder::from_uri(uri)
+            .with_storage_options(s3_config)
+            .build()?;
+        read_table.load().await.expect("Failed to load");
+        let session = create_session(read_table)?;
+        let batches = session
+            .sql("SELECT MAX(file) FROM proto_table")
+            .await?
+            .collect()
+            .await?;
+        let last_file = batches
+            .get(0)
+            .context("No first record batch")?
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .context("Result is not a string array")?
+            .value(0);
+        println!("Processing from last file {}", last_file);
+        let full_prefix = format!("s3://{}/{}.", args.source_bucket, source_filter.file_prefix);
+        let stripped_prefix = last_file.replace(full_prefix.as_str(), "");
+        let timestamp_millis = stripped_prefix.split(".").next();
+        let millis: i64 = timestamp_millis.context("No timestamp on file")?.parse()?;
+        // Take one millisecond after the last file
+        let datetime = NaiveDateTime::from_timestamp_millis(millis + 1);
+        source_filter.after = datetime;
+    }
 
-    let mut writer =
-        RecordBatchWriter::for_table(&table).expect("Failed to make RecordBatchWriter");
+    let mut writer = RecordBatchWriter::for_table(&table)?;
 
-    
     let file_store = AwsStore::from_settings(&Settings {
         bucket: args.source_bucket.clone(),
         endpoint: args.source_endpoint,
@@ -125,32 +183,36 @@ async fn main() {
         secret_access_key: args.source_secret_access_key,
     });
 
-    let file_infos = file_store.list(args.source_filter);
+    let file_infos = file_store.list(source_filter);
     let file_stream = file_store.source(file_infos);
 
     let mut chunked_stream = file_stream.chunks(args.max_records);
     while let Some(item) = chunked_stream.next().await {
         let messages = item
-            .iter()
+            .into_iter()
             .map(|result| {
-                let bytes = result.as_ref().expect("Failed to get bytes");
-                descriptor
-                    .parse_from(&mut CodedInputStream::from_bytes(bytes.as_ref()))
-                    .expect("Failed to decode message")
+                result.and_then(|(file, bytes)| {
+                    Ok((
+                        format!("s3://{}/{}", args.source_bucket, file.key),
+                        descriptor.parse_from(&mut CodedInputStream::from_bytes(bytes.as_ref()))?,
+                    ))
+                })
             })
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>>>()?;
         let batch = to_record_batch(
             delta_schema,
             descriptor.clone(),
-            messages.iter().map(|m| m.as_ref()).collect(),
+            messages
+                .iter()
+                .map(|m| (m.0.as_str(), m.1.as_ref()))
+                .collect(),
             args.partition_timestamp_column.clone(),
         );
 
-        writer.write(batch).await.expect("Failed to write");
+        writer.write(batch).await?
     }
 
-    writer
-        .flush_and_commit(&mut table)
-        .await
-        .expect("Failed to flush write");
+    writer.flush_and_commit(&mut table).await?;
+
+    Ok(())
 }

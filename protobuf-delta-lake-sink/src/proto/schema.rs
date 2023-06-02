@@ -65,7 +65,7 @@ pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> Sch
         protobuf::reflect::RuntimeType::Message(m) => {
             return SchemaField::new(
                 field_name.to_string(),
-                SchemaDataType::r#struct(SchemaTypeStruct::new(get_delta_schema(&m, false))),
+                SchemaDataType::r#struct(SchemaTypeStruct::new(get_delta_schema(&m))),
                 false, // Protobuf does not support nulls
                 HashMap::new(),
             );
@@ -80,8 +80,8 @@ pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> Sch
     )
 }
 
-pub fn get_delta_schema(descriptor: &MessageDescriptor, append_date: bool) -> Vec<SchemaField> {
-    let mut ret = descriptor
+pub fn get_delta_schema(descriptor: &MessageDescriptor) -> Vec<SchemaField> {
+    descriptor
         .fields()
         .map(|f| {
             let field_name = f.name();
@@ -102,17 +102,5 @@ pub fn get_delta_schema(descriptor: &MessageDescriptor, append_date: bool) -> Ve
             };
             get_single_delta_schema(field_name, field_type)
         })
-        .collect::<Vec<_>>();
-
-    if append_date {
-        let date_field = SchemaField::new(
-            "date".to_string(),
-            SchemaDataType::primitive("date".to_string()),
-            false,
-            HashMap::new(),
-        );
-        ret.push(date_field);
-    }
-
-    ret
+        .collect::<Vec<_>>()
 }

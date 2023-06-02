@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 file-store = { git = "https://github.com/helium/oracles", version = "0.1.0" }
-deltalake = { version = "0.11.0", features = ["s3"] }
+deltalake = { version = "0.12.0", features = ["s3", "datafusion"] }
 clap = { version = "4.3.0", features = ["derive"] }
 protoc = "2.28.0"
 chrono = "0.4.24"
@@ -26,3 +26,4 @@ protobuf-parse = "3.2.0"
 async-compression = "0.4.0"
 tokio-util = "0.7.8"
 anyhow = "1"
+datafusion = "25.0.0"

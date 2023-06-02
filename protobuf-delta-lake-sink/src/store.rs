@@ -1,8 +1,8 @@
+use anyhow::{Error, Result};
 use bytes::BytesMut;
 use file_store::Settings;
 use lazy_static::lazy_static;
 use regex::Regex;
-use anyhow::{Result, Error};
 
 use aws_sdk_s3::{config::Region, primitives::ByteStream, Client, Config};
 use chrono::NaiveDateTime;
@@ -13,22 +13,22 @@ use futures::{
 use std::str::FromStr;
 
 pub type Stream<T> = BoxStream<'static, Result<T>>;
-pub type BytesMutStream = Stream<BytesMut>;
+pub type BytesMutStream = Stream<(FileInfo, BytesMut)>;
 pub type FileInfoStream = Stream<FileInfo>;
 
-#[derive(Debug, clap::Args)]
+#[derive(Debug, Clone, clap::Args)]
 pub struct FileFilter {
-    /// Optional start time to look for (inclusive). Defaults to the oldest
-    /// timestamp in the bucket.
+    /// Optional start time to look for (inclusive). Defaults to the newest timestamp seen in the delta
+    /// table.
     #[clap(long)]
-    after: Option<NaiveDateTime>,
+    pub after: Option<NaiveDateTime>,
     /// Optional end time to look for (exclusive). Defaults to the latest
     /// available timestamp in the bucket.
     #[clap(long)]
-    before: Option<NaiveDateTime>,
+    pub before: Option<NaiveDateTime>,
     /// The file prefix to search for
     #[clap(long)]
-    file_prefix: String,
+    pub file_prefix: String,
 }
 
 lazy_static! {
@@ -64,11 +64,13 @@ pub fn client_from_settings(settings: &Settings) -> Client {
     Client::from_conf(config.build())
 }
 
+#[derive(Debug, Clone)]
 pub struct AwsStore {
     pub bucket: String,
     pub client: Client,
 }
 
+#[derive(Debug, Clone)]
 pub struct FileInfo {
     pub key: String,
     pub timestamp: i64,
@@ -160,10 +162,13 @@ impl AwsStore {
         let bucket = self.bucket.clone();
         let client = self.client.clone();
         infos
-            .map_ok(move |info| get_byte_stream(client.clone(), bucket.clone(), info.key))
+            .map_ok(move |info| {
+                get_byte_stream(client.clone(), bucket.clone(), info.key.clone())
+                    .map_ok(|v| (info, v))
+            })
             .try_buffered(2)
             .flat_map(|stream| match stream {
-                Ok(stream) => stream_source(stream),
+                Ok((file, stream)) => stream_source(stream, file),
                 Err(err) => stream::once(async move { Err(err) }).boxed(),
             })
             .fuse()
@@ -171,19 +176,23 @@ impl AwsStore {
     }
 }
 
-fn stream_source(stream: ByteStream) -> BytesMutStream {
+fn stream_source(stream: ByteStream, file: FileInfo) -> BytesMutStream {
     use async_compression::tokio::bufread::GzipDecoder;
     use tokio_util::{
         codec::{length_delimited::LengthDelimitedCodec, FramedRead},
         io::StreamReader,
     };
 
-    Box::pin(
+    let ret = Box::pin(
         FramedRead::new(
             GzipDecoder::new(StreamReader::new(stream)),
             LengthDelimitedCodec::new(),
-        ).map_err(|err| err.into())
-    )
+        )
+        .map_err(|err| err.into())
+        .map(move |v| v.map(|i| (file.clone(), i))),
+    );
+
+    ret
 }
 
 async fn get_byte_stream<K>(client: Client, bucket: String, key: K) -> Result<ByteStream>

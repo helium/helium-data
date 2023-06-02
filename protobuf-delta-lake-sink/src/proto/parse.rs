@@ -1,12 +1,13 @@
 use std::{any::Any, sync::Arc};
 
+use deltalake::arrow::array::StringArray;
 use deltalake::arrow::datatypes::{Field, Fields};
 use deltalake::{
     arrow::{
         array::{
             Array, ArrayBuilder, ArrayData, ArrayRef, BinaryBuilder, BooleanBuilder, BufferBuilder,
-            Date32Array, Decimal128Array, GenericListArray, PrimitiveBuilder,
-            StringBuilder, StructArray,
+            Date32Array, Decimal128Array, GenericListArray, PrimitiveBuilder, StringBuilder,
+            StructArray,
         },
         datatypes::{ArrowPrimitiveType, DataType, Float32Type, Float64Type, Int32Type, Int64Type},
         record_batch::RecordBatch,
@@ -355,8 +356,12 @@ impl ReflectBuilder for StructReflectBuilder {
                     let builder = self.builders.get_mut(index).unwrap();
                     builder.append_value(field.get_singular(message))
                 }
-                protobuf::reflect::RuntimeFieldType::Repeated(_) => panic!("Repeated fields in a nested message are not supported"),
-                protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
+                protobuf::reflect::RuntimeFieldType::Repeated(_) => {
+                    panic!("Repeated fields in a nested message are not supported")
+                }
+                protobuf::reflect::RuntimeFieldType::Map(_, _) => {
+                    panic!("Map fields are not supported")
+                }
             };
         }
     }
@@ -375,7 +380,7 @@ fn runtime_type_to_data_type(value: &RuntimeType) -> DataType {
         RuntimeType::VecU8 => DataType::Binary,
         RuntimeType::Enum(_) => DataType::Binary,
         RuntimeType::Message(m) => {
-            let fields = get_delta_schema(m, false);
+            let fields = get_delta_schema(m);
             let schema = <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(
                 &SchemaTypeStruct::new(fields),
             )
@@ -421,7 +426,7 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Box<dyn ReflectArrayBuilder>
             enum_descriptor: enum_descriptor.clone(),
         }),
         RuntimeType::Message(m) => {
-            let schema = Schema::new(get_delta_schema(m, false));
+            let schema = Schema::new(get_delta_schema(m));
             let arrow_schema =
                 <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(&schema)
                     .expect("Failed to get arrow schema from delta schema");
@@ -430,8 +435,12 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Box<dyn ReflectArrayBuilder>
                 .fields()
                 .map(|field| match field.runtime_field_type() {
                     protobuf::reflect::RuntimeFieldType::Singular(t) => get_builder(&t, capacity),
-                    protobuf::reflect::RuntimeFieldType::Repeated(_) => panic!("Repeated fields in a nested message are not supported"),
-                    protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
+                    protobuf::reflect::RuntimeFieldType::Repeated(_) => {
+                        panic!("Repeated fields in a nested message are not supported")
+                    }
+                    protobuf::reflect::RuntimeFieldType::Map(_, _) => {
+                        panic!("Map fields are not supported")
+                    }
                 })
                 .collect::<Vec<Box<dyn ReflectArrayBuilder>>>();
             Box::new(StructReflectBuilder {
@@ -486,9 +495,12 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Arc<d
 pub fn to_record_batch(
     delta_schema: &Schema,
     descriptor: MessageDescriptor,
-    messages: Vec<&dyn MessageDyn>,
+    // Tuple of file name and message
+    messages_with_files: Vec<(&str, &dyn MessageDyn)>,
     partition_timestamp_column: Option<String>,
 ) -> RecordBatch {
+    let messages = messages_with_files.iter().map(|m| m.1).collect::<Vec<_>>();
+    let files = messages_with_files.iter().map(|m| m.0).collect::<Vec<_>>();
     let fields = descriptor.fields();
     let arrow_schema =
         <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(delta_schema)
@@ -518,6 +530,9 @@ pub fn to_record_batch(
         ));
 
         arrow.push(date_data);
+
+        let file_data: Arc<dyn Array> = Arc::new(StringArray::from(files));
+        arrow.push(file_data);
     }
     RecordBatch::try_new(Arc::new(arrow_schema), arrow).expect("Failed to create record batch")
 }
