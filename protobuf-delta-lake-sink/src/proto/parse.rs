@@ -317,7 +317,7 @@ impl ArrayBuilder for StructReflectBuilder {
     }
 
     fn finish_cloned(&self) -> ArrayRef {
-        panic!("Not implemented")
+        unimplemented!()
     }
 
     fn as_any(&self) -> &dyn Any {
