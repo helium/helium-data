@@ -23,7 +23,7 @@ use protobuf::{
 use super::get_delta_schema;
 
 trait ReflectBuilder: ArrayBuilder {
-    fn append_value(&mut self, v: Option<ReflectValueRef>) -> ();
+    fn append_value(&mut self, v: Option<ReflectValueRef>);
 }
 
 macro_rules! make_builder_wrapper {
