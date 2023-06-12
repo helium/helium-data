@@ -1,0 +1,29 @@
+[package]
+name = "protobuf-delta-lake-sink"
+version = "0.0.1"
+description = "Pull gzipped protos from s3 and sink them to delta lake"
+edition = "2021"
+
+[dependencies]
+file-store = { git = "https://github.com/helium/oracles", version = "0.1.0" }
+deltalake = { git = "https://github.com/helium/delta-rs", branch = "main", features = ["s3", "datafusion"] }
+clap = { version = "4.3.0", features = ["derive"] }
+protoc = "2.28.0"
+chrono = "0.4.24"
+tokio = "1"
+futures = "0.3.28"
+helium-proto = {git = "https://github.com/helium/proto", branch = "master", features = ["services"]}
+aws-sdk-s3 = { version = "0.28.0" }
+aws-credential-types = { version = "0.55.3", features = ["hardcoded-credentials"] }
+lazy_static = "1.4.0"
+aws-types = "0.55.3"
+regex = "1"
+thiserror = "1.0.40"
+protobuf = "3.2.0"
+reqwest = "0.11"
+bytes = "1.4.0"
+protobuf-parse = "3.2.0"
+async-compression = "0.4.0"
+tokio-util = "0.7.8"
+anyhow = "1"
+datafusion = "25.0.0"
