@@ -58,10 +58,11 @@ jobs:
 
     - name: Build, tag, and push image to Amazon ECR
       env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.CONTAINER }}
         CONTAINER_PATH: ${{ env.CONTAINER_PATH }}
         IMAGE_TAG: ${{ env.VERSION }}
       run: |
-        REGISTRY_ARN=$(aws ecr-public describe-registries | jq --raw-output .registries[0].registryArn)
-        docker build -t $REGISTRY_ARN/$ECR_REPOSITORY:$IMAGE_TAG $CONTAINER_PATH
-        docker push $REGISTRY_ARN/$ECR_REPOSITORY:$IMAGE_TAG
+        REGISTRY_ALIAS=$(aws ecr-public describe-registries | jq --raw-output .registries[0].registryId)
+        docker build -t $ECR_REGISTRY/$REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG $CONTAINER_PATH
+        docker push $ECR_REGISTRY/$REGISTRY_ALIAS/$ECR_REPOSITORY:$IMAGE_TAG
