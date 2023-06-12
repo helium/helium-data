@@ -10,7 +10,7 @@ use futures::{
     stream::{self, BoxStream, StreamExt},
     FutureExt, TryFutureExt, TryStreamExt,
 };
-use std::str::FromStr;
+use std::{str::FromStr, collections::HashSet, sync::Arc};
 
 pub type Stream<T> = BoxStream<'static, Result<T>>;
 pub type BytesMutStream = Stream<(FileInfo, BytesMut)>;
@@ -29,6 +29,14 @@ pub struct FileFilter {
     /// The file prefix to search for
     #[clap(long)]
     pub file_prefix: String,
+
+    /// Files to exclude
+    #[clap(long, value_parser = parse_set, default_value = "")]
+    pub exclude: HashSet<String>,
+}
+
+fn parse_set(s: &str) -> Result<HashSet<String>, String> {
+    Ok(s.split(',').map(String::from).collect())
 }
 
 lazy_static! {
@@ -88,6 +96,7 @@ impl AwsStore {
     pub fn list(&self, file_filter: FileFilter) -> Stream<FileInfo> {
         let before = file_filter.before;
         let after = file_filter.after;
+        let exclude = Arc::new(file_filter.exclude);
         let request = self
             .client
             .list_objects_v2()
@@ -120,6 +129,7 @@ impl AwsStore {
         )
         .flat_map(move |entry| match entry {
             Ok(output) => {
+                let exclude = exclude.clone();
                 let filtered = output
                     .contents
                     .unwrap_or_default()
@@ -144,6 +154,9 @@ impl AwsStore {
                     })
                     .filter(move |info| {
                         before.map_or(true, |v| info.timestamp <= v.timestamp_millis())
+                    })
+                    .filter(move |info| {
+                      !exclude.contains(&info.key)
                     })
                     .map(Ok);
                 stream::iter(filtered).boxed()

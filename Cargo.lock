@@ -2240,12 +2240,12 @@ dependencies = [
 
 [[package]]
 name = "deltalake"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51500e2a5f31c9d64435297f9f8a227dac90a04814596e8243a5f401bd8aee33"
+version = "0.13.0"
+source = "git+https://github.com/helium/delta-rs?branch=main#c87fcf1720a18332842877fbe5926196d092ce35"
 dependencies = [
  "arrow",
  "arrow-array",
+ "arrow-buffer",
  "arrow-cast",
  "arrow-ord",
  "arrow-row",
@@ -2265,13 +2265,13 @@ dependencies = [
  "dynamodb_lock",
  "errno",
  "futures",
- "glibc_version",
  "itertools",
  "lazy_static",
  "libc",
  "log",
  "num-bigint",
  "num-traits",
+ "num_cpus",
  "object_store",
  "once_cell",
  "parking_lot 0.12.1",
@@ -2771,15 +2771,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
-]
-
-[[package]]
-name = "glibc_version"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "803ff7635f1ab4e2c064b68a0c60da917d3d18dc8d086130f689d62ce4f1c33e"
-dependencies = [
- "regex",
 ]
 
 [[package]]

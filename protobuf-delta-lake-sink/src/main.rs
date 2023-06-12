@@ -1,5 +1,8 @@
 use anyhow::{Context, Result};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use chrono::NaiveDateTime;
 use clap::Parser;
@@ -80,6 +83,8 @@ fn create_session(table: DeltaTable) -> Result<SessionContext> {
     Ok(session)
 }
 
+const ONE_DAY_MILLIS: i64 = 86_400_000;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     use clap::Parser;
@@ -137,33 +142,74 @@ async fn main() -> Result<()> {
     };
     let mut source_filter = args.source_filter;
     let delta_schema = table.get_schema().expect("No schema");
+    // If no after is provided, process from 1 day before the last file, excluding files we already processed. This guarentees
+    // that we catch any out-of-order files. 
     if source_filter.after.is_none() && args.partition_timestamp_column.is_some() {
         let mut read_table = DeltaTableBuilder::from_uri(uri)
             .with_storage_options(s3_config)
             .build()?;
         read_table.load().await.expect("Failed to load");
         let session = create_session(read_table)?;
-        let batches = session
+        let last_file_batches = session
             .sql("SELECT MAX(file) FROM proto_table")
             .await?
             .collect()
             .await?;
-        let last_file = batches
-            .get(0)
-            .context("No first record batch")?
-            .column(0)
-            .as_any()
-            .downcast_ref::<StringArray>()
-            .context("Result is not a string array")?
-            .value(0);
-        println!("Processing from last file {}", last_file);
-        let full_prefix = format!("s3://{}/{}.", args.source_bucket, source_filter.file_prefix);
-        let stripped_prefix = last_file.replace(full_prefix.as_str(), "");
-        let timestamp_millis = stripped_prefix.split(".").next();
-        let millis: i64 = timestamp_millis.context("No timestamp on file")?.parse()?;
-        // Take one millisecond after the last file
-        let datetime = NaiveDateTime::from_timestamp_millis(millis + 1);
-        source_filter.after = datetime;
+        if let Some(last_file_batch) = last_file_batches.get(0) {
+            let last_file = last_file_batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .context("Result is not a string array")?
+                .value(0);
+
+            println!("Processing from last file {}", last_file);
+            let bucket_prefix = format!("s3://{}/", args.source_bucket);
+            let full_prefix = format!("{}{}.", bucket_prefix, source_filter.file_prefix);
+            let stripped_prefix = last_file.replace(full_prefix.as_str(), "");
+            let timestamp_millis = stripped_prefix.split(".").next();
+            let millis: i64 = timestamp_millis.context("No timestamp on file")?.parse()?;
+            let one_day_ago_millis = millis - ONE_DAY_MILLIS;
+            let datetime = NaiveDateTime::from_timestamp_millis(one_day_ago_millis).context("Could not construct date")?;
+
+            // TODO: Uncomment this when this is fixed https://github.com/delta-io/delta-rs/issues/1445
+            // let query = format!(
+            //   "SELECT file FROM proto_table WHERE {} >= {}", 
+            //   args.partition_timestamp_column.clone().unwrap(),
+            //   one_day_ago_millis
+            // );
+            let query = format!(
+              "SELECT file FROM proto_table WHERE date >= '{}'", 
+              datetime.format("%Y-%m-%d")
+            );
+            println!("Query {}", query);
+            let batches = session
+            .sql(query.as_str())
+            .await?
+            .collect()
+            .await?;
+            let files_last_day = batches
+                .iter()
+                .map(|batch| {
+                    batch
+                        .column(0)
+                        .as_any()
+                        .downcast_ref::<StringArray>()
+                        .context("Result is not a string array")
+                })
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|s| s.replace(bucket_prefix.as_str(), "").to_string())
+                .collect::<HashSet<_>>();
+
+            println!("Files last day {:?}", files_last_day);
+
+            // Take one millisecond after the last file
+            source_filter.after = Some(datetime);
+            source_filter.exclude = files_last_day;
+        }
     }
 
     let mut writer = RecordBatchWriter::for_table(&table)?;
