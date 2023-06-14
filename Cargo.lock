@@ -2331,12 +2331,11 @@ dependencies = [
 
 [[package]]
 name = "deltalake"
-version = "0.13.0"
-source = "git+https://github.com/helium/delta-rs?branch=main#c87fcf1720a18332842877fbe5926196d092ce35"
+version = "0.12.0"
+source = "git+https://github.com/helium/delta-rs?branch=main#ae7d2d23088f0d10ed5d8020f000b2681fd48caa"
 dependencies = [
  "arrow",
  "arrow-array",
- "arrow-buffer",
  "arrow-cast",
  "arrow-ord",
  "arrow-row",
@@ -2356,13 +2355,13 @@ dependencies = [
  "dynamodb_lock",
  "errno",
  "futures",
+ "glibc_version",
  "itertools",
  "lazy_static",
  "libc",
  "log",
  "num-bigint",
  "num-traits",
- "num_cpus",
  "object_store",
  "once_cell",
  "parking_lot 0.12.1",
@@ -2865,6 +2864,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "glibc_version"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "803ff7635f1ab4e2c064b68a0c60da917d3d18dc8d086130f689d62ce4f1c33e"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3138,9 +3146,9 @@ checksum = "0646026eb1b3eea4cd9ba47912ea5ce9cc07713d105b1a14698f4e6433d348b7"
 dependencies = [
  "http",
  "hyper",
- "rustls 0.21.1",
+ "rustls 0.21.2",
  "tokio",
- "tokio-rustls 0.24.0",
+ "tokio-rustls 0.24.1",
 ]
 
 [[package]]
@@ -4250,6 +4258,7 @@ dependencies = [
  "helium-proto",
  "lazy_static",
  "object_store",
+ "parquet",
  "protobuf",
  "protobuf-parse",
  "protoc",
@@ -4477,14 +4486,14 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls 0.21.1",
+ "rustls 0.21.2",
  "rustls-pemfile",
  "serde",
  "serde_json",
  "serde_urlencoded",
  "tokio",
  "tokio-native-tls",
- "tokio-rustls 0.24.0",
+ "tokio-rustls 0.24.1",
  "tokio-util",
  "tower-service",
  "url",
@@ -4737,9 +4746,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.21.1"
+version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c911ba11bc8433e811ce56fde130ccf32f5127cab0e0194e9c68c5a5b671791e"
+checksum = "e32ca28af694bc1bbf399c33a516dbdf1c90090b8ab23c2bc24f834aa2247f5f"
 dependencies = [
  "log",
  "ring",
@@ -5515,11 +5524,11 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0d409377ff5b1e3ca6437aa86c1eb7d40c134bfec254e44c830defa92669db5"
+checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
- "rustls 0.21.1",
+ "rustls 0.21.2",
  "tokio",
 ]
 
@@ -6177,9 +6186,9 @@ dependencies = [
 
 [[package]]
 name = "xml-rs"
-version = "0.8.13"
+version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d8f380ae16a37b30e6a2cf67040608071384b1450c189e61bea3ff57cde922d"
+checksum = "52839dc911083a8ef63efa4d039d1f58b5e409f923e44c80828f206f66e5541c"
 
 [[package]]
 name = "xmlparser"

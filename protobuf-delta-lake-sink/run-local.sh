@@ -29,7 +29,7 @@ AWS_S3_ALLOW_UNSAFE_RENAME=true ../target/debug/protobuf-delta-lake-sink \
   --source-protos service/poc_lora.proto \
   --source-protos service/packet_verifier.proto \
   --target-bucket delta \
-  --target-table bronze/iot_poc_v1 \
+  --target-table bronze/iot_poc_v12 \
   --target-region us-east-2 \
   --source-access-key-id minioadmin \
   --source-secret-access-key minioadmin \
