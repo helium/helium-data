@@ -1,16 +1,17 @@
 use anyhow::{Error, Result};
+use aws_config::default_provider::credentials::default_provider;
 use bytes::BytesMut;
 use file_store::Settings;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use aws_sdk_s3::{config::Region, primitives::ByteStream, Client, Config};
+use aws_sdk_s3::{config::Region, primitives::ByteStream, Client};
 use chrono::NaiveDateTime;
 use futures::{
     stream::{self, BoxStream, StreamExt},
     FutureExt, TryFutureExt, TryStreamExt,
 };
-use std::{str::FromStr, collections::HashSet, sync::Arc};
+use std::{collections::HashSet, str::FromStr, sync::Arc};
 
 pub type Stream<T> = BoxStream<'static, Result<T>>;
 pub type BytesMutStream = Stream<(FileInfo, BytesMut)>;
@@ -43,10 +44,11 @@ lazy_static! {
     static ref RE: Regex = Regex::new(r"([a-z,_]+).(\d+)(.gz)?").unwrap();
 }
 
-pub fn client_from_settings(settings: &Settings) -> Client {
+pub async fn client_from_settings(settings: &Settings) -> Client {
     // Configure AWS S3 client
     let region = Region::new(settings.region.clone());
-    let mut config = Config::builder().region(region);
+    let mut config = aws_sdk_s3::config::Config::builder().region(region);
+
     config = match (
         settings.access_key_id.clone(),
         settings.secret_access_key.clone(),
@@ -56,15 +58,15 @@ pub fn client_from_settings(settings: &Settings) -> Client {
                 aws_sdk_s3::config::Credentials::from_keys(access_key_id, secret_access_key, None);
             config.credentials_provider(credentials)
         }
-        _ => config,
+        _ => {
+            let provider = default_provider().await;
+            config.credentials_provider(provider)
+        }
     };
 
     println!("Endpoint: {:?}", settings.endpoint.clone());
     config = match settings.endpoint.clone() {
-        Some(endpoint) => {
-            config.set_force_path_style(Some(true));
-            config.endpoint_url(endpoint)
-        }
+        Some(endpoint) => config.force_path_style(true).endpoint_url(endpoint),
         _ => config,
     };
 
@@ -86,10 +88,10 @@ pub struct FileInfo {
 }
 
 impl AwsStore {
-    pub fn from_settings(settings: &Settings) -> AwsStore {
+    pub async fn from_settings(settings: &Settings) -> AwsStore {
         AwsStore {
             bucket: settings.bucket.clone(),
-            client: client_from_settings(settings),
+            client: client_from_settings(settings).await,
         }
     }
 
@@ -155,9 +157,7 @@ impl AwsStore {
                     .filter(move |info| {
                         before.map_or(true, |v| info.timestamp <= v.timestamp_millis())
                     })
-                    .filter(move |info| {
-                      !exclude.contains(&info.key)
-                    })
+                    .filter(move |info| !exclude.contains(&info.key))
                     .map(Ok);
                 stream::iter(filtered).boxed()
             }
@@ -181,7 +181,10 @@ impl AwsStore {
             })
             .try_buffered(2)
             .flat_map(|stream| match stream {
-                Ok((file, stream)) => stream_source(stream, file),
+                Ok((file, stream)) => {
+                    println!("Reading {}", file.key);
+                    stream_source(stream, file)
+                }
                 Err(err) => stream::once(async move { Err(err) }).boxed(),
             })
             .fuse()
@@ -195,13 +198,17 @@ fn stream_source(stream: ByteStream, file: FileInfo) -> BytesMutStream {
         codec::{length_delimited::LengthDelimitedCodec, FramedRead},
         io::StreamReader,
     };
+    let key = file.clone().key;
 
     let ret = Box::pin(
         FramedRead::new(
             GzipDecoder::new(StreamReader::new(stream)),
             LengthDelimitedCodec::new(),
         )
-        .map_err(|err| err.into())
+        .map_err(move |err| {
+            println!("Error on file {:?} {:?}", key, err);
+            err.into()
+        })
         .map(move |v| v.map(|i| (file.clone(), i))),
     );
 

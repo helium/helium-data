@@ -466,13 +466,14 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Resul
             let mut builder: Box<dyn ReflectArrayBuilder> = get_builder(&t, messages.len())?;
             let mut offsets = BufferBuilder::<i32>::new(messages.len() + 1);
 
+            offsets.append(0);
             for message in messages.iter() {
                 let repeated = f.get_repeated(*message);
                 for i in 0..repeated.len() {
                     let value = repeated.get(i);
-                    offsets.append(i32::try_from(builder.len()).unwrap());
                     builder.append_value(Some(value));
                 }
+                offsets.append(i32::try_from(builder.len()).unwrap());
             }
             let field = Arc::new(Field::new("item", runtime_type_to_data_type(&t), false));
             let data_type = DataType::List(field);
@@ -484,7 +485,6 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Resul
                 .add_child_data(values_data)
                 .null_bit_buffer(None);
             let array_data = unsafe { array_data_builder.build_unchecked() };
-
             Arc::new(GenericListArray::<i32>::from(array_data))
         }
         protobuf::reflect::RuntimeFieldType::Map(_, _) => panic!("Map fields are not supported"),
@@ -503,7 +503,6 @@ pub fn to_record_batch(
     let fields = descriptor.fields();
     let arrow_schema =
         <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(delta_schema)?;
-    println!("Batching {} messages", messages.len());
     let mut arrow = fields
         .map(|f| field_to_arrow(&f, &messages))
         .collect::<Result<Vec<_>>>()?;

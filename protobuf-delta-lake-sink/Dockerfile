@@ -8,8 +8,17 @@ WORKDIR /app
 
 # Copy the Cargo files and install dependencies
 COPY Cargo.toml ./
+
+# Do a build before we add the source to cache the compiled deps
+RUN mkdir ./src && echo 'fn main() { println!("Dummy!"); }' > ./src/main.rs
+RUN cargo build --release
+RUN rm -rf ./src
+
 # Copy the source code and build the application
 COPY src ./src
+# The last modified attribute of main.rs needs to be updated manually,
+# otherwise cargo won't rebuild it.
+RUN touch -a -m ./src/main.rs
 RUN cargo build --release
 
 FROM debian:bullseye-slim

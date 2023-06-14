@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
 };
@@ -11,11 +11,15 @@ use futures::{stream, StreamExt};
 use protobuf::reflect::{FileDescriptor, MessageDescriptor, RuntimeType};
 use protobuf_parse::Parser;
 
-async fn fetch_and_write_file(url: String) -> Result<PathBuf> {
+async fn fetch_and_write_file(proto_base_url: String, path: String) -> Result<PathBuf> {
+    let url = format!("{}/{}", proto_base_url, path);
     let response = reqwest::get(url.clone()).await?;
     let file_bytes = response.bytes().await?;
-    let file_path =
-        Path::new(".").join(Path::new(url.clone().split("/").last().context("Bad url")?)); // Set the desired file path
+    let file_path = Path::new("./protos").join(Path::new(&path)); // Set the desired file path
+                                                                  // Create parent directories if they don't exist
+    if let Some(parent_dir) = file_path.parent() {
+        fs::create_dir_all(parent_dir)?;
+    }
 
     let mut file = File::create(file_path.clone()).context("Failed to create file")?;
     file.write_all(&file_bytes)?;
@@ -25,11 +29,12 @@ async fn fetch_and_write_file(url: String) -> Result<PathBuf> {
 
 // All urls containing the proto we want and deps
 pub async fn get_descriptor(
+    proto_base_url: String,
     proto_urls: Vec<String>,
     proto_name: String,
 ) -> Result<MessageDescriptor> {
     let paths_raw = stream::iter(proto_urls)
-        .map(|url| fetch_and_write_file(url))
+        .map(|path| fetch_and_write_file(proto_base_url.clone(), path))
         .buffer_unordered(2)
         .collect::<Vec<_>>()
         .await;
@@ -37,7 +42,7 @@ pub async fn get_descriptor(
     let paths: Vec<PathBuf> = paths_raw.into_iter().collect::<Result<Vec<_>>>()?;
 
     let mut parser = Parser::new();
-    parser.include(Path::new("."));
+    parser.include(Path::new("./protos"));
     for path in &paths {
         parser.input(&path);
     }
