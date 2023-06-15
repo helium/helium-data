@@ -87,9 +87,9 @@ struct Args {
     #[clap(long, default_value = "500000000")]
     pub batch_size: i64,
 
-    /// How many recoerds to decode at a time. Has an effect on memory pressure
-    #[clap(long, default_value = "20000")]
-    pub max_records: usize,
+    /// Max bytes of records to read at a time (to avoid oom)
+    #[clap(long, default_value = "100000000")]
+    pub max_record_bytes: i64,
 }
 
 fn create_session(table: DeltaTable) -> Result<SessionContext> {
@@ -265,12 +265,12 @@ async fn main() -> Result<()> {
     .await;
 
     let file_infos = file_store.list(source_filter).fuse();
-    let mut chunked = ChunkedStream::new(file_infos, args.batch_size);
+    let mut chunked = ChunkedStream::new(file_infos, args.batch_size, |f| f.size);
 
     while let Some(file_list) = chunked.next().await {
         let file_stream = file_store.source(Box::pin(stream::iter(file_list.into_iter())));
         // Chunk max records at a time
-        let mut chunked_bytes = file_stream.chunks(args.max_records);
+        let mut chunked_bytes = ChunkedStream::new(file_stream, args.max_record_bytes, |(_, record)| i64::try_from(record.len()).unwrap());
         while let Some(bytes) = chunked_bytes.next().await {
             let messages = bytes
                 .into_iter()

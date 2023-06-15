@@ -4,68 +4,78 @@ use futures::stream::Stream;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::FileInfo;
-
-pub struct ChunkedStream<S>
+pub struct ChunkedStream<S, T, F>
 where
-    S: Stream<Item = Result<FileInfo, Error>> + Unpin,
+    S: Stream<Item = Result<T, Error>> + Unpin,
+    F: FnMut(&T) -> i64
 {
     stream: S,
     chunk_size: i64,
-    leftover: Option<FileInfo>,
+    chunk: Vec<Result<T, Error>>,
+    current_size: i64,
+    func: F,
 }
 
-impl<S> ChunkedStream<S>
+impl<S, T, F> ChunkedStream<S, T, F>
 where
-    S: Stream<Item = Result<FileInfo, Error>> + Unpin,
+    S: Stream<Item = Result<T, Error>> + Unpin,
+    F: FnMut(&T) -> i64,
 {
-    pub fn new(stream: S, chunk_size: i64) -> Self {
+    pub fn new(stream: S, chunk_size: i64, chunk_fn: F) -> Self {
         ChunkedStream {
             stream,
             chunk_size,
-            leftover: None,
+            chunk: vec![],
+            current_size: 0,
+            func: chunk_fn,
         }
     }
 }
 
-impl<S> Stream for ChunkedStream<S>
+impl<S, T, F> Stream for ChunkedStream<S, T, F>
 where
-    S: Stream<Item = Result<FileInfo, Error>> + Unpin,
+    S: Stream<Item = Result<T, Error>> + Unpin,
+    F: FnMut(&T) -> i64,
 {
-    type Item = Vec<Result<FileInfo, Error>>;
+    type Item = Vec<Result<T, Error>>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut chunk = Vec::new();
-        let mut current_size = 0;
-        if let Some(file_info) = &self.leftover {
-            current_size = file_info.size;
-            chunk.push(Ok(file_info.clone()));
-        }
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let self_mut = unsafe { self.get_unchecked_mut() };
 
-        while let Some(item) = ready!(Pin::new(&mut self.stream).poll_next(cx)) {
+        let mut leftover = None;
+        while let Some(item) = ready!(Pin::new(&mut self_mut.stream).poll_next(cx)) {
             match item {
-                Err(e) => chunk.push(Err(e)),
-                Ok(file_info) => {
-                    let item_size = file_info.size;
+                Err(e) => self_mut.chunk.push(Err(e)),
+                Ok(item) => {
+                    let item_size = (self_mut.func)(&item);
 
-                    if current_size + item_size <= self.chunk_size {
+                    if self_mut.current_size + item_size <= self_mut.chunk_size {
                         // Add item to the current chunk
-                        chunk.push(Ok(file_info));
-                        current_size += item_size;
+                        self_mut.chunk.push(Ok(item));
+                        self_mut.current_size += item_size;
                     } else {
-                        self.leftover = Some(file_info);
+                        leftover = Some(item);
                         break;
                     }
                 }
             }
         }
 
-        if !chunk.is_empty() {
+        if !self_mut.chunk.is_empty() {
+            let ret = std::mem::take(&mut self_mut.chunk);
+            self_mut.current_size = 0;
+            if let Some(left) = leftover {
+              self_mut.chunk.push(Ok(left));
+            }
             // Return the last remaining chunk
-            Poll::Ready(Some(chunk))
+            Poll::Ready(Some(ret))
         } else {
+          if let Some(left) = leftover {
+            Poll::Ready(Some(vec![Ok(left)]))
+          } else {
             // End of stream
             Poll::Ready(None)
+          }
         }
     }
 }

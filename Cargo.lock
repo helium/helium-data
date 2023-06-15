@@ -366,11 +366,9 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b0122885821398cc923ece939e24d1056a2384ee719432397fa9db87230ff11"
 dependencies = [
- "flate2",
  "futures-core",
  "memchr",
  "pin-project-lite",
- "tokio",
 ]
 
 [[package]]
@@ -1480,18 +1478,17 @@ dependencies = [
 [[package]]
 name = "beacon"
 version = "0.1.0"
-source = "git+https://github.com/helium/gateway-rs.git?branch=main#7556cbac64062ab8fa003c0b5dc8aa4c8019ad18"
+source = "git+https://github.com/helium/proto?branch=master#8fa24367e3b048e8a3b2d068e49701d1d311ceb1"
 dependencies = [
  "base64 0.21.2",
  "byteorder",
  "helium-proto",
- "lazy_static",
  "prost",
  "rand",
  "rand_chacha",
  "rust_decimal",
  "serde",
- "sha2 0.10.6",
+ "sha2 0.9.9",
  "thiserror",
 ]
 
@@ -2637,9 +2634,9 @@ dependencies = [
 [[package]]
 name = "file-store"
 version = "0.1.0"
-source = "git+https://github.com/helium/oracles#147a4f4b6b51919eeea45496129dba68f3a6003e"
+source = "git+https://github.com/helium/oracles?branch=main#087f8530aecff8c8effd8aca015a577573d8503b"
 dependencies = [
- "async-compression 0.4.0",
+ "async-compression 0.3.15",
  "async-trait",
  "aws-config 0.51.0",
  "aws-sdk-s3 0.21.0",
@@ -2667,7 +2664,7 @@ dependencies = [
  "rust_decimal_macros",
  "serde",
  "serde_json",
- "sha2 0.10.6",
+ "sha2 0.9.9",
  "sqlx",
  "strum",
  "strum_macros",
@@ -4074,7 +4071,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "poc-metrics"
 version = "0.1.0"
-source = "git+https://github.com/helium/oracles#147a4f4b6b51919eeea45496129dba68f3a6003e"
+source = "git+https://github.com/helium/oracles?branch=main#087f8530aecff8c8effd8aca015a577573d8503b"
 dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
