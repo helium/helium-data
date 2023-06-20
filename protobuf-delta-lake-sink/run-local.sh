@@ -59,7 +59,7 @@ AWS_S3_ALLOW_UNSAFE_RENAME=true ../target/debug/protobuf-delta-lake-sink \
   --batch-size 1000000000 \
   --source-endpoint http://localhost:9000 \
   --target-endpoint http://localhost:9000 \
-  --partition-timestamp-column gateway_tmst
+  --partition-timestamp-column received_timestamp
 
 
 # docker run -it -e AWS_S3_ALLOW_UNSAFE_RENAME=true docker.io/library/protobuf-delta-lake-sink:latest \

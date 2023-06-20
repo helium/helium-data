@@ -270,7 +270,10 @@ async fn main() -> Result<()> {
     while let Some(file_list) = chunked.next().await {
         let file_stream = file_store.source(Box::pin(stream::iter(file_list.into_iter())));
         // Chunk max records at a time
-        let mut chunked_bytes = ChunkedStream::new(file_stream, args.max_record_bytes, |(_, record)| i64::try_from(record.len()).unwrap());
+        let mut chunked_bytes =
+            ChunkedStream::new(file_stream, args.max_record_bytes, |(_, record)| {
+                i64::try_from(record.len()).unwrap()
+            });
         while let Some(bytes) = chunked_bytes.next().await {
             let messages = bytes
                 .into_iter()

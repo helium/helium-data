@@ -7,7 +7,7 @@ use std::task::{Context, Poll};
 pub struct ChunkedStream<S, T, F>
 where
     S: Stream<Item = Result<T, Error>> + Unpin,
-    F: FnMut(&T) -> i64
+    F: FnMut(&T) -> i64,
 {
     stream: S,
     chunk_size: i64,
@@ -65,17 +65,17 @@ where
             let ret = std::mem::take(&mut self_mut.chunk);
             self_mut.current_size = 0;
             if let Some(left) = leftover {
-              self_mut.chunk.push(Ok(left));
+                self_mut.chunk.push(Ok(left));
             }
             // Return the last remaining chunk
             Poll::Ready(Some(ret))
         } else {
-          if let Some(left) = leftover {
-            Poll::Ready(Some(vec![Ok(left)]))
-          } else {
-            // End of stream
-            Poll::Ready(None)
-          }
+            if let Some(left) = leftover {
+                Poll::Ready(Some(vec![Ok(left)]))
+            } else {
+                // End of stream
+                Poll::Ready(None)
+            }
         }
     }
 }

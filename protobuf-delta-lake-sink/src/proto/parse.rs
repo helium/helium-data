@@ -515,13 +515,11 @@ pub fn to_record_batch(
         );
         let timestamps = field_refs.into_iter().map(|field| {
             field
-                .context("Timestamp not found")?
-                .as_value_ref()
-                .to_u64()
-                .context("Not a u64")
+                .and_then(|f| f.as_value_ref().to_u64().context("Not a u64"))
+                .unwrap_or_else(|_| 0)
         });
         let dates = timestamps
-            .map(|t| i32::try_from(t? / (1000 * 60 * 60 * 24)).context("Not an int32"))
+            .map(|t| i32::try_from(t / (1000 * 60 * 60 * 24)).context("Not an int32"))
             .collect::<Result<Vec<i32>>>()?;
         let date_data: Arc<dyn Array> = Arc::new(Date32Array::from(dates));
 
@@ -542,7 +540,7 @@ fn get_field(
     let field_descriptor = descriptor
         .field_by_name(path[0])
         .context("Field not found")?;
-      
+
     let value: Option<ReflectValueBox> = field_descriptor.get_singular(message).map(|i| i.to_box());
     if path.len() != 1 {
         if let Some(val) = value {
