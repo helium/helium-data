@@ -57,6 +57,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56fc6cf8dc8c4158eed8649f9b8b0ea1518eb62b544fe9490d66fa0b349eafe9"
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -358,17 +364,6 @@ dependencies = [
  "xz2",
  "zstd 0.11.2+zstd.1.5.2",
  "zstd-safe 5.0.2+zstd.1.5.2",
-]
-
-[[package]]
-name = "async-compression"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b0122885821398cc923ece939e24d1056a2384ee719432397fa9db87230ff11"
-dependencies = [
- "futures-core",
- "memchr",
- "pin-project-lite",
 ]
 
 [[package]]
@@ -1478,7 +1473,7 @@ dependencies = [
 [[package]]
 name = "beacon"
 version = "0.1.0"
-source = "git+https://github.com/helium/proto?branch=master#8fa24367e3b048e8a3b2d068e49701d1d311ceb1"
+source = "git+https://github.com/helium/proto?branch=master#9208f4f93afa9741f4bd52a1ea12073c6905d0a0"
 dependencies = [
  "base64 0.21.2",
  "byteorder",
@@ -1580,7 +1575,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4114279215a005bc675e386011e594e1d9b800918cea18fcadadcce864a2046b"
 dependencies = [
  "borsh-derive",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -1641,11 +1636,12 @@ dependencies = [
 
 [[package]]
 name = "bs58"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
+checksum = "f5353f36341f7451062466f0b755b96ac3a9547e4d7f6b70d603fc721a7d7896"
 dependencies = [
- "sha2 0.9.9",
+ "sha2 0.10.6",
+ "tinyvec",
 ]
 
 [[package]]
@@ -1987,9 +1983,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.14"
+version = "0.9.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46bd5f3f85273295a9d14aedfb86f6aadbff6d8f5295c4a9edb08e819dcf5695"
+checksum = "ae211234986c545741a7dc064309f67ee1e5ad243d0e48335adc0484d960bcc7"
 dependencies = [
  "autocfg",
  "cfg-if",
@@ -2010,9 +2006,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.15"
+version = "0.8.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c063cd8cc95f5c377ed0d4b49a4b21f632396ff690e8470c29b3359b346984b"
+checksum = "5a22b2d63d4d1dc0b7f1b6b2747dd0088008a9be28b6ddf0b1e7d335e3037294"
 dependencies = [
  "cfg-if",
 ]
@@ -2149,7 +2145,7 @@ dependencies = [
  "arrow",
  "arrow-array",
  "arrow-schema",
- "async-compression 0.3.15",
+ "async-compression",
  "async-trait",
  "bytes",
  "bzip2",
@@ -2634,9 +2630,9 @@ dependencies = [
 [[package]]
 name = "file-store"
 version = "0.1.0"
-source = "git+https://github.com/helium/oracles?branch=main#087f8530aecff8c8effd8aca015a577573d8503b"
+source = "git+https://github.com/helium/oracles?branch=main#be6ba55c476c914518d7693b03b6edf0f999cb26"
 dependencies = [
- "async-compression 0.3.15",
+ "async-compression",
  "async-trait",
  "aws-config 0.51.0",
  "aws-sdk-s3 0.21.0",
@@ -2934,12 +2930,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "hashlink"
-version = "0.8.2"
+name = "hashbrown"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0761a1b9491c4f2e3d66aa0f62d0fba0af9a0e2852e4d48ea506632a4b56e6aa"
+checksum = "2c6201b9ff9fd90a5a3bac2e56a830d0caa509576f0e503818ee82c181b3437a"
 dependencies = [
- "hashbrown 0.13.2",
+ "ahash 0.8.3",
+ "allocator-api2",
+]
+
+[[package]]
+name = "hashlink"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "312f66718a2d7789ffef4f4b7b213138ed9f1eb3aa1d0d82fc99f88fb3ffd26f"
+dependencies = [
+ "hashbrown 0.14.0",
 ]
 
 [[package]]
@@ -2953,9 +2959,9 @@ dependencies = [
 
 [[package]]
 name = "helium-crypto"
-version = "0.6.9"
+version = "0.6.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "138416a642e7228796b191795035ca5e4aad8a0b3628706caf73198dd8b44ff6"
+checksum = "d6e073c63accfae1ac87284e875989b65cf39b7cffcc539d9eb60f9c4db4748a"
 dependencies = [
  "base64 0.21.2",
  "bs58",
@@ -2967,7 +2973,7 @@ dependencies = [
  "p256",
  "rand_core",
  "serde",
- "sha2 0.10.6",
+ "sha2 0.9.9",
  "signature 2.1.0",
  "sqlx",
  "thiserror",
@@ -2976,7 +2982,7 @@ dependencies = [
 [[package]]
 name = "helium-proto"
 version = "0.1.0"
-source = "git+https://github.com/helium/proto?branch=master#7a137324fc41b415a9df44558954683233a95239"
+source = "git+https://github.com/helium/proto?branch=master#9208f4f93afa9741f4bd52a1ea12073c6905d0a0"
 dependencies = [
  "bytes",
  "prost",
@@ -3507,9 +3513,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memoffset"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d61c719bcfbcf5d62b3a09efa6088de8c54bc0bfcd3ea7ae39fcc186108b8de1"
+checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
 ]
@@ -3851,9 +3857,9 @@ dependencies = [
 
 [[package]]
 name = "os_str_bytes"
-version = "6.5.0"
+version = "6.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceedf44fb00f2d1984b0bc98102627ce622e083e49a5bacdb3e514fa4238e267"
+checksum = "4d5d9eb14b174ee9aa2ef96dc2b94637a2d4b6e7cb873c7e171f0c20c6cf3eac"
 
 [[package]]
 name = "outref"
@@ -4071,7 +4077,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "poc-metrics"
 version = "0.1.0"
-source = "git+https://github.com/helium/oracles?branch=main#087f8530aecff8c8effd8aca015a577573d8503b"
+source = "git+https://github.com/helium/oracles?branch=main#be6ba55c476c914518d7693b03b6edf0f999cb26"
 dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
@@ -4083,9 +4089,9 @@ dependencies = [
 
 [[package]]
 name = "portable-atomic"
-version = "1.3.2"
+version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc59d1bcc64fc5d021d67521f818db868368028108d37f0e98d74e33f68297b5"
+checksum = "767eb9f07d4a5ebcb39bbf2d452058a93c011373abf6832e24194a1c3f004794"
 
 [[package]]
 name = "ppv-lite86"
@@ -4105,9 +4111,9 @@ dependencies = [
 
 [[package]]
 name = "primeorder"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf8d3875361e28f7753baefef104386e7aa47642c93023356d97fdef4003bfb5"
+checksum = "3c2fcef82c0ec6eefcc179b978446c399b3cdf73c392c35604e399eee6df1ee3"
 dependencies = [
  "elliptic-curve",
 ]
@@ -4240,7 +4246,7 @@ name = "protobuf-delta-lake-sink"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "async-compression 0.4.0",
+ "async-compression",
  "aws-config 0.55.3",
  "aws-credential-types 0.55.3",
  "aws-sdk-s3 0.28.0",
@@ -4325,9 +4331,9 @@ dependencies = [
 
 [[package]]
 name = "quanta"
-version = "0.11.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cc73c42f9314c4bdce450c77e6f09ecbddefbeddb1b5979ded332a3913ded33"
+checksum = "a17e662a7a8291a865152364c20c7abc5e60486ab2001e8ec10b24862de0b9ab"
 dependencies = [
  "crossbeam-utils",
  "libc",
@@ -4667,9 +4673,9 @@ dependencies = [
 
 [[package]]
 name = "rust_decimal"
-version = "1.29.1"
+version = "1.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26bd36b60561ee1fb5ec2817f198b6fd09fa571c897a5e86d1487cfc2b096dfc"
+checksum = "d0446843641c69436765a35a5a77088e28c2e6a12da93e84aa3ab1cd4aa5a042"
 dependencies = [
  "arrayvec",
  "borsh",
@@ -4685,9 +4691,9 @@ dependencies = [
 
 [[package]]
 name = "rust_decimal_macros"
-version = "1.29.1"
+version = "1.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e773fd3da1ed42472fdf3cfdb4972948a555bc3d73f5e0bdb99d17e7b54c687"
+checksum = "7ca5c398d85f83b9a44de754a2048625a8c5eafcf070da7b8f116b685e2f6608"
 dependencies = [
  "quote",
  "rust_decimal",

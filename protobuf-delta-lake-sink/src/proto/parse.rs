@@ -542,6 +542,7 @@ fn get_field(
     let field_descriptor = descriptor
         .field_by_name(path[0])
         .context("Field not found")?;
+      
     let value: Option<ReflectValueBox> = field_descriptor.get_singular(message).map(|i| i.to_box());
     if path.len() != 1 {
         if let Some(val) = value {
