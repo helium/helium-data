@@ -33,6 +33,7 @@ object Main extends App {
   val config = createSparkConfFromEnv()
   val spark = SparkSession.builder().config(config).getOrCreate()
   B58.register(spark)
+  TimestampExt.register(spark)
   // val ssc = new StreamingContext(config, Seconds(sys.props.getOrElse("SPARK_INTERVAL", "14400").toInt))
   createTablesFromEnv(spark)
   spark.sql(
