@@ -22,7 +22,7 @@ SELECT
       from_unixtime(beacon_report.received_timestamp / 1000) as received_timestamp_millis,
       cast(beacon_report.location as decimal(23, 0)) location,
       (beacon_report.hex_scale / 10000) as scale,
-      b58encode(beacon_report.report.pub_key) as pub_key,
+      b58encodeChecked(beacon_report.report.pub_key) as pub_key,
       base64(beacon_report.report.local_entropy) as local_entropy,
       base64(beacon_report.report.remote_entropy) as remote_entropy,
       base64(beacon_report.report.data) as data,
@@ -39,7 +39,7 @@ SELECT
      struct(
       from_unixtime(witness.received_timestamp / 1000) as received_timestamp_millis,
       cast(witness.location as decimal(23, 0)) location,
-      b58encode(witness.report.pub_key) as pub_key,
+      b58encodeChecked(witness.report.pub_key) as pub_key,
       (witness.hex_scale / 10000) as scale,
       witness.status,
       base64(witness.report.data) as data,

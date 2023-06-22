@@ -19,8 +19,8 @@
         "TABLE_LORA_POC_V1": "s3a://delta/bronze/iot_poc_v17",
         "SPARK_DATABRICKS_DELTA_AUTOCOMPACT_ENABLED": "true",
         "PARTITION_BY": "date",
-        "CHECKPOINT": "s3a://delta/checkpoints/test7",
-        "OUTPUT": "s3a://delta/silver/test7",
+        "CHECKPOINT": "s3a://delta/checkpoints/test9",
+        "OUTPUT": "s3a://delta/silver/test9",
         "QUERY_PATH": "./query.sql"
       }
     }

@@ -12,5 +12,6 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-aws" % "3.3.1",
   "org.codehaus.janino" % "janino" % "3.0.16",
   "io.delta" %% "delta-core" % "2.4.0",
-  "com.amazonaws" % "aws-java-sdk" % "1.11.469"
+  "com.amazonaws" % "aws-java-sdk" % "1.11.469",
+  "org.scalatest" %% "scalatest" % "3.2.16" % "test"
 )
