@@ -141,7 +141,8 @@ impl ReflectBuilder for EnumReflectBuilder {
                 self.enum_descriptor
                     .value_by_number(i.to_enum_value().expect("Not an enum"))
                     .expect("Value not found")
-                    .full_name()
+                    .name()
+                    .to_string()
             })
             .unwrap_or_default(),
         )
