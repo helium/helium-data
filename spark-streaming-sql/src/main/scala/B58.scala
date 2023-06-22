@@ -4,14 +4,10 @@ import org.apache.spark.sql.SparkSession
 object B58 {
   def register(spark: SparkSession) {
     spark.udf.register("b58encode", encodeToBase58 _)
-    spark.udf.register("b58encodeChecked", encodeToBase58Checked _)
   }
 
   val alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
   val idxToChar = Map(alphabet.zipWithIndex.map(_.swap): _*)
-
-  def encodeToBase58Checked(arrayOpt: Option[Array[Byte]]): Option[String] =
-    encodeToBase58(arrayOpt.map(array => array.slice(0, 32)))
 
   def encodeToBase58(arrayOpt: Option[Array[Byte]]): Option[String] =
     arrayOpt.map(array =>
