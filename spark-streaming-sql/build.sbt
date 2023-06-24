@@ -9,10 +9,10 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-streaming" % sparkVersion % "provided",
   "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
-  "org.apache.hadoop" % "hadoop-aws" % "3.3.1",
+  "org.apache.hadoop" % "hadoop-aws" % "3.3.1" % "provided",
   "org.codehaus.janino" % "janino" % "3.0.16",
   "io.delta" %% "delta-core" % "2.4.0",
-  "com.amazonaws" % "aws-java-sdk" % "1.11.469",
+  "com.amazonaws" % "aws-java-sdk" % "1.11.469" % "provided",
   "org.scalatest" %% "scalatest" % "3.2.16" % "test"
 )
 
