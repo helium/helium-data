@@ -7,9 +7,13 @@ import scala.io.Source
 
 object Main extends App {
   def createSparkConfFromEnv(): SparkConf = {
-    val sparkConf = new SparkConf().setMaster(sys.props.getOrElse("SPARK_MASTER", "local[*]"))
+    var sparkConf = new SparkConf()
         .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    val master = sys.props.get("SPARK_MASTER")
+    if (master.isDefined) {
+      sparkConf = sparkConf.setMaster(master.get)
+    }
     val sparkEnvVars = sys.env.filterKeys(_.startsWith("SPARK_"))
     
     sparkEnvVars.foreach { case (key, value) =>
