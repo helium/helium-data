@@ -10,7 +10,7 @@ use deltalake::{
     table_state::DeltaTableState,
     writer::{DeltaWriter, RecordBatchWriter},
     DeltaOps, DeltaTable, DeltaTableBuilder, DeltaTableError, DeltaTableMetaData, ObjectStore,
-    Path, SchemaDataType, SchemaField, SchemaTypeStruct,
+    Path, SchemaDataType, SchemaField, SchemaTypeStruct, checkpoints,
 };
 use file_store::Settings;
 use futures::stream::{self, StreamExt};
@@ -305,6 +305,7 @@ async fn main() -> Result<()> {
         }
         println!("Flushing and committing");
         writer.flush_and_commit(&mut table).await?;
+        checkpoints::create_checkpoint(&table).await?;
     }
 
     Ok(())
