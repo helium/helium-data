@@ -1,5 +1,5 @@
 # Specify the base image
-FROM rust:1.68.2 as builder
+FROM rust:1.70.0 as builder
 
 RUN apt-get update && apt-get install -y protobuf-compiler 
 
