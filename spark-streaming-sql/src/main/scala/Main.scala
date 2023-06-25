@@ -20,7 +20,7 @@ object Main extends App {
     sparkConf
   }
 
-  def createTablesFromEnv(spark: SparkSession) {
+  def createTablesFromEnv(spark: SparkSession): Unit = {
     val sparkEnvVars = sys.env.filterKeys(_.startsWith("TABLE_"))
     
     sparkEnvVars.foreach { case (key, value) =>

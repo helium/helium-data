@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
 
 // assemblyJarName in assembly := s"${name.value}_${scalaBinaryVersion.value}-${sparkVersion.value}_${version.value}.jar"
 assemblyMergeStrategy in assembly := {
- case PathList("META-INF", xs @ _*) => MergeStrategy.discard
- case x => MergeStrategy.first
+  case PathList("META-INF","services", xg @ _*) => MergeStrategy.concat
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
 }
