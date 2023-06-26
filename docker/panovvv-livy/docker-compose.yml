@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+ panovvv-livy:
+    image: panovvv/livy:latest
+#    build: '../livy-docker'
+    hostname: panovvv-livy
+    # depends_on:
+    #   - spark-master
+    #   - spark-worker-1
+    #   - spark-worker-2
+    volumes:
+      - ./livy_batches:/livy_batches
+      - ./data:/data
+    environment:
+      - SPARK_MASTER=yarn
+      # Intentionally not specified - if it's set here, then we can't override it
+      # via REST API ("conf"={} map)
+      # Can be client or cluster
+#      - SPARK_DEPLOY_MODE=client
+
+      - LOCAL_DIR_WHITELIST=/data/batches/
+      - ENABLE_HIVE_CONTEXT=false
+      # Defaults are fine for variables below. Uncomment to change them.
+#      - LIVY_HOST=0.0.0.0
+#      - LIVY_PORT=8998
+    expose:
+      - 1-65535
+    ports:
+      - 8998:8998
+    # networks:
+    #   spark_net:
+    #     ipv4_address: 172.28.1.6
+    # extra_hosts:
+    #   - "master:172.28.1.1"
+    #   - "worker1:172.28.1.2"
+    #   - "worker2:172.28.1.3"
+    #   - "hivemetastore:172.28.1.4"
+    #   - "zeppelin:172.28.1.5"
