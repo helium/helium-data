@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+ bitnami-livy:
+  image: bitnami-livy
+  command: ["sh", "-c", "/opt/bitnami/livy/bin/livy-server"]
+  user: root
+  container_name: spark-livy
+  # environment:
+  #  - SPARK_LOCAL_IP=127.0.0.1
+  #  - SPARK_LOCAL_HOSTNAME=localhost
+  #  - SPARK_IDENT_STRING=localhost
+  #  - SPARK_PUBLIC_DNS=127.0.0.1
+  #   - SPARK_CONF_DIR=/conf
+  #   - SPARK_DIVER_CORES=1
+  #   - SPARK_DRIVER_MEMORY=1g
+  #   - SPARK_MASTER_ENDPOINT=spark-master
+  #   - SPARK_MASTER_PORT=7077
+  #   - LIVY_FILE_LOCAL_DIR_WHITELIST=/opt/jars
+  volumes:
+    - type: bind
+      source: ./livy-server/conf/
+      target: /opt/bitnami/livy/conf/
+    - type: bind
+      source: ./livy-server/target/
+      target: /target/
+    - type: bind
+      source: ./livy-server/data/
+      target: /data/
+  ports:
+    - '8998:8998'
+    # - "./jars:/opt/jars"
+    # - "./conf/livy/livy.conf.extra:/usr/local/bin/livy.conf.extra"
