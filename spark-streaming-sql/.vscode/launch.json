@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Scala",
+      "type": "scala",
+      "request": "launch",
+      "mainClass": "Main",
+      "jvmOptions": ["--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"],
+      "env": {
+        "SPARK_MASTER": "local[*]",
+        "SPARK_HADOOP_FS_S3A_ENDPOINT": "localhost:9000",
+        "SPARK_HADOOP_FS_S3A_ACCESS_KEY": "minioadmin",
+        "SPARK_HADOOP_FS_S3A_SECRET_KEY": "minioadmin",
+        "SPARK_HADOOP_FS_S3A_PATH_STYLE_ACCESS": "true",
+        "SPARK_HADOOP_FS_S3A_IMPL": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+        "SPARK_HADOOP_FS_S3A_CONNECTION_SSL_ENABLED": "false",
+        "SPARK_HADOOP_FS_S3A_AWS_CREDENTIALS_PROVIDER": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+        "TABLE_LORA_POC_V1": "s3a://delta/bronze/iot_poc_v18",
+        "SPARK_DATABRICKS_DELTA_AUTOCOMPACT_ENABLED": "true",
+        "PARTITION_BY": "date",
+        "CHECKPOINT": "s3a://delta/checkpoints/test11",
+        "OUTPUT": "s3a://delta/silver/test11",
+        "QUERY_PATH": "./query.sql"
+      }
+    }
+  ]
+}
