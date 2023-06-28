@@ -305,6 +305,7 @@ async fn main() -> Result<()> {
         }
         println!("Flushing and committing");
         writer.flush_and_commit(&mut table).await?;
+        println!("Writing checkpoint");
         checkpoints::create_checkpoint(&table).await?;
     }
 
