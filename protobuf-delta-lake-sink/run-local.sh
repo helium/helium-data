@@ -29,7 +29,7 @@ AWS_S3_ALLOW_UNSAFE_RENAME=true ../target/debug/protobuf-delta-lake-sink \
   --source-protos service/poc_lora.proto \
   --source-protos service/packet_verifier.proto \
   --target-bucket delta \
-  --target-table bronze/iot_poc_v18 \
+  --target-table bronze/iot_poc_v21 \
   --target-region us-east-2 \
   --source-access-key-id minioadmin \
   --source-secret-access-key minioadmin \
@@ -50,7 +50,7 @@ AWS_S3_ALLOW_UNSAFE_RENAME=true ../target/debug/protobuf-delta-lake-sink \
 #   --source-protos region.proto \
 #   --source-protos service/packet_router.proto \
 #   --target-bucket delta \
-#   --target-table bronze/packet_router_packet_report_v1 \
+#   --target-table bronze/packet_router_packet_report_v5 \
 #   --target-region us-east-2 \
 #   --source-access-key-id minioadmin \
 #   --source-secret-access-key minioadmin \
