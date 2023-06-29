@@ -125,7 +125,7 @@ async fn main() -> Result<()> {
     delta_fields.push(SchemaField::new(
         "file".to_string(),
         SchemaDataType::primitive("string".to_string()),
-        false,
+        true,
         HashMap::new(),
     ));
 
