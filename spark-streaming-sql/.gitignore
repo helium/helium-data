@@ -1,0 +1,8 @@
+target
+delta
+spark-warehouse
+.metals
+.bsp
+.bloop
+project/project
+project/target
