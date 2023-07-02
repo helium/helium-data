@@ -476,7 +476,7 @@ fn field_to_arrow(f: &FieldDescriptor, messages: &Vec<&dyn MessageDyn>) -> Resul
                 }
                 offsets.append(i32::try_from(builder.len()).unwrap());
             }
-            let field = Arc::new(Field::new("item", runtime_type_to_data_type(&t), false));
+            let field = Arc::new(Field::new("item", runtime_type_to_data_type(&t), true));
             let data_type = DataType::List(field);
             let values_arr = builder.finish();
             let values_data = values_arr.to_data();
