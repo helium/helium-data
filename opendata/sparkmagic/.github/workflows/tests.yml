@@ -1,0 +1,42 @@
+name: Run Unit Tests
+
+on:
+  push: {}
+  schedule:
+    # Run daily
+    - cron: '6 4 * * *'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install system dependencies
+        run: |
+          sudo apt-get install -y libkrb5-dev
+      - name: Install package dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest mock
+          pip install -r hdijupyterutils/requirements.txt -e hdijupyterutils
+          pip install -r autovizwidget/requirements.txt -e autovizwidget
+          pip install -r sparkmagic/requirements.txt -e sparkmagic
+      - name: Run hdijupyterutils tests
+        run: |
+          pytest hdijupyterutils
+      - name: Run autovizwidget tests
+        run: |
+          pytest autovizwidget
+      - name: Run sparkmagic tests
+        run: |
+          mkdir ~/.sparkmagic
+          pytest sparkmagic

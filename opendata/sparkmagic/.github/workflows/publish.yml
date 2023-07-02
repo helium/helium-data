@@ -1,0 +1,86 @@
+name: Publish Packages
+
+on:
+  release:
+    types: [released]
+
+
+jobs:
+  build:
+    env:
+      PYPI_TOKEN_AUTOVIZWIDGET: ${{ secrets.PYPI_TOKEN_AUTOVIZWIDGET }}
+      PYPI_TOKEN_HDIJUPYTERUTILS: ${{ secrets.PYPI_TOKEN_HDIJUPYTERUTILS }}
+      PYPI_TOKEN_SPARKMAGIC: ${{ secrets.PYPI_TOKEN_SPARKMAGIC }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+
+      - name: Setup PyPI
+        run: |
+          cat > ~/.pypirc <<- EOF
+          [distutils]
+          index-servers =
+              pypi
+              pypitest
+
+          [autovizwidget]
+          username=__token__
+          password=$PYPI_TOKEN_AUTOVIZWIDGET
+
+          [hdijupyterutils]
+          username=__token__
+          password=$PYPI_TOKEN_HDIJUPYTERUTILS
+
+          [sparkmagic]
+          username=__token__
+          password=$PYPI_TOKEN_SPARKMAGIC
+
+          EOF
+
+      - name: Build hdijupyterutils dist
+        run: |
+          cd hdijupyterutils
+          python setup.py sdist
+          cd ..
+
+      - name: Publish hdijupyterutils to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN_HDIJUPYTERUTILS }}
+          packages_dir: hdijupyterutils/dist/
+          verbose: true
+
+      - name: Build autovizwidget dist
+        run: |
+          cd autovizwidget
+          python setup.py sdist
+          cd ..
+
+      - name: Publish autovizwidget to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN_AUTOVIZWIDGET }}
+          packages_dir: autovizwidget/dist/
+          verbose: true
+
+      - name: Build sparkmagic dist
+        run: |
+          cd sparkmagic
+          python setup.py sdist
+          cd ..
+
+      - name: Publish sparkmagic to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN_SPARKMAGIC }}
+          packages_dir: sparkmagic/dist/
+          verbose: true
