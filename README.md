@@ -20,6 +20,13 @@ Helium Network data is streamed into Amazon AWS S3 data storage.  It is availabl
 
 Helium currently publishes about 3TB of data per month.  At Amazon's standard egress rate of $0.09 per GB it will cost $270 to download a single month's worth of Helium data.  We caution users to download data with care to avoid large AWS bills.  Delta Lake allows users to query the data very efficiently and will only download necessary data.
 
+**Warning**
+Large queries carry the risk of high egress fees when the data is transfered outside of us-west-2.  
+As a matter of practice, it is recommended to keep the following in mind:
+* Specify a start date on all queries.
+* Repeated queries will incur additional cost.
+* Syncing the entire bucket is not advised (`aws s3 sync`).
+
 ### Docker
 
 A Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings. To install docker, follow the official instructions [here](https://docs.docker.com/get-docker/).
