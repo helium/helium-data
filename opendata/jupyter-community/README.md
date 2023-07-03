@@ -16,17 +16,17 @@ Users should have at least a beginner level of experience with Python, SQL and L
 
 SQL
 
-https://bootcamp.berkeley.edu/resources/coding/learn-sql/
+https://www.google.com/search?q=learning+sql
 
 Python
 
-https://www.python.org/about/gettingstarted/
+https://www.google.com/search?q=learning+python
 
-https://www.dataquest.io/blog/learn-python-the-right-way/
 
 Linux
 
-https://medium.com/javarevisited/top-10-courses-to-learn-linux-command-line-in-2020-best-and-free-f3ee4a78d0c0
+https://www.google.com/search?q=learning+linux
+
 
 ### Amazon AWS
 
@@ -56,9 +56,10 @@ You do not need to install Jupyter.  It is available in the Jupyter docker image
 
 Delta Lake is a modern storage framework designed to handle massive amounts of data and make that data available to compute engines such as  Spark where it becomes queryable via languages such as Python, SQL and Scala.
 
-Your Jupyter notebook will use Delta Lake to access Helium's S3 data lake.  Delta Lake will need to be installed in the Jupyter notebook.  We recommend browsing Delta Lake's documenation to familiarize yourself with Delta Lake's features.
+Your Jupyter notebook will use Spark and Delta Lake to access Helium's S3 data lake.  Delta Lake will need to be installed in the Jupyter notebook.  We recommend browsing Delta Lake's documenation to familiarize yourself with Delta Lake's features.
 
 https://delta.io/
+
 
 ## Instructions
 
