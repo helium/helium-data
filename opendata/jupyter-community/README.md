@@ -1,22 +1,31 @@
-# Community Jupyter
+# Community Data
 
-Helium will soon publish all Oracle S3 data files in the Delta Lake format. Delta Lake and Spark are modern standards for accessing and querying massive data tables. Delta Lake is easy to use after you've installed the right tools. With Spark, Jupyter and Delta Lake you can efficiently query Helium data using standard SQL commands.
+Helium will soon publish all Oracle S3 data files in the Delta Lake and Parquet format. Delta Lake, Parquet and Spark are modern standards for accessing and querying massive data tables. Delta Lake is easy to use after you've installed the right tools. With Spark, Jupyter and Delta Lake you can efficiently query Helium data using standard SQL commands.
 
-We hope the community enjoys these new data tools and look forward to future community contributions.
+Using Parquet, Helium will be able to provide data which is 30 to 50% smaller than the equivalent data in protobuf format.  Additionally parquet data has integrated schemas which make parsing and querying the data much simpler.  Parquet is the data format of choice by data scientists.
+
+We hope the community enjoys these new data tools and look forward to collaborating and integrating future community contributions.
 
 The following Jupyter notebook shows how to access Helium's S3 files and SQL query the S3 files using Spark DataFrames.
 
-## Prerquisites
+## Prerequisites
 
-### Python and Linux
+### Python, SQL and Linux
 
-Users should have at least a beginner level of experience with Python and Linux.
+Users should have at least a beginner level of experience with Python, SQL and Linux.  A good understanding of SQL is the most important skill.
+
+SQL
+
+https://bootcamp.berkeley.edu/resources/coding/learn-sql/
+
+Python
 
 https://www.python.org/about/gettingstarted/
 
 https://www.dataquest.io/blog/learn-python-the-right-way/
 
 Linux
+
 https://medium.com/javarevisited/top-10-courses-to-learn-linux-command-line-in-2020-best-and-free-f3ee4a78d0c0
 
 ### Amazon AWS
@@ -24,6 +33,8 @@ https://medium.com/javarevisited/top-10-courses-to-learn-linux-command-line-in-2
 Helium's data is streamed into Amazon AWS S3 data storage.  It is available to the public on a 'requestor pays' model.
 To access Helum's S3 data you'll need an Amaozon AWS account
 https://aws.amazon.com/
+
+Helium currently publishes about 3TB of data per month.  At Amazon's standard egress rate of $0.09 per GB it will cost $270 to download a single month's worth of Helium data.  We caution users to download data with care to avoid large AWS bills.  Delta Lake allows users to query the data very efficiently and will only download necessary data.
 
 ### Docker
 
@@ -43,7 +54,11 @@ You do not need to install Jupyter.  It is available in the Jupyter docker image
 
 ### Delta Lake
 
+Delta Lake is a modern storage framework designed to handle massive amounts of data and make that data available to compute engines such as  Spark where it becomes queryable via languages such as Python, SQL and Scala.
+
 Your Jupyter notebook will use Delta Lake to access Helium's S3 data lake.  Delta Lake will need to be installed in the Jupyter notebook.  We recommend browsing Delta Lake's documenation to familiarize yourself with Delta Lake's features.
+
+https://delta.io/
 
 ## Instructions
 
@@ -83,6 +98,7 @@ Click the 'run' button to run individual notebook code snippets.
 
 
 ## References
+
 Delta Lake
 
 https://delta.io/
