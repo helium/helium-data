@@ -8,11 +8,52 @@ The following Jupyter notebook shows how to access Helium's S3 files and SQL que
 
 ## Prerquisites
 
-Install Docker
+### Python and Linux
+
+Users should have at least a beginner level of experience with Python and Linux.
+
+https://www.python.org/about/gettingstarted/
+
+https://www.dataquest.io/blog/learn-python-the-right-way/
+
+Linux
+https://medium.com/javarevisited/top-10-courses-to-learn-linux-command-line-in-2020-best-and-free-f3ee4a78d0c0
+
+### Amazon AWS
+
+Helium's data is streamed into Amazon AWS S3 data storage.  It is available to the public on a 'requestor pays' model.
+To access Helum's S3 data you'll need an Amaozon AWS account
+https://aws.amazon.com/
+
+### Docker
+
+A Docker container image is a lightweight, standalone, executable package of software that includes everything needed to run an application: code, runtime, system tools, system libraries and settings.
+
+#### To install Docker
 
 https://docs.docker.com/get-docker/
 
-To launch Jupyter
+### Jupyter
+
+The Jupyter Notebook is an open source web application that you can use to create and share documents that contain live code, equations, visualizations and SQL.  We'll use Jupyter to access Helium's S3 data.
+
+https://jupyter.org/
+
+You do not need to install Jupyter.  It is available in the Jupyter docker image.  But please read the Jupyter documentation.
+
+### Delta Lake
+
+Your Jupyter notebook will use Delta Lake to access Helium's S3 data lake.  Delta Lake will need to be installed in the Jupyter notebook.  We recommend browsing Delta Lake's documenation to familiarize yourself with Delta Lake's features.
+
+## Instructions
+
+### AWS Account credentials
+
+Login into your AWS account and retrieve your access_key, secret_access_key and session_token.  You'll use these credentials to access Helium's S3 data bucket.
+
+### Launch Jupyter
+
+Change into the jupyter-community folder and launch the Jupyter application.
 
 ```
 git clone --branch opendata https://github.com/helium/helium-data.git
@@ -20,13 +61,26 @@ cd ./helium-data/opendata/jupyter-community
 docker run -it -p 8888:8888 -v $(pwd):/home/jovyan/work jupyter/all-spark-notebook
 ```
 
-## Open Jupyter in Browser
+### Open Jupyter in Browser
 
 In the Docker logs look for a line with the following pattern
 
 http://127.0.0.1:8888/lab?token=<my_token>
 
 Copy&paste the URL from the Docker log and open from your Browser.
+
+### Open the DeltaLake notebook
+
+From within Jupyter find the Work folder.  Open it.
+
+Within Work you'll find a notebaook named DeltaLake.ipynb.  Click and open the notebook.
+
+You can now view individual Jupyter cells.  The Jupyter notebook requires some pre-configuration.  Open a 'Terminal' and follow the instructions in the Notebook to install delta-lake and create your aws credentials file.
+
+### Run DeltaLake notebook cells.
+
+Click the 'run' button to run individual notebook code snippets.
+
 
 ## References
 Delta Lake
