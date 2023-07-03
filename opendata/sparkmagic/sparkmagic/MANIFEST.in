@@ -1,2 +1,0 @@
-recursive-include sparkmagic/kernels *.js *.json
-include requirements.txt
