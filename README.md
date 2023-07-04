@@ -54,7 +54,7 @@ Login into your AWS account and retrieve your access_key, secret_access_key and 
 Change into the jupyter-community folder and launch the Jupyter application.
 
 ```
-git clone --branch opendata https://github.com/helium/helium-data.git
+git clone https://github.com/helium/helium-data.git
 cd ./helium-data/jupyter-community
 docker run -it -p 8888:8888 -v $(pwd):/home/jovyan/work jupyter/all-spark-notebook
 ```
