@@ -23,7 +23,7 @@ Helium currently publishes about 3TB of data per month.  At Amazon's standard eg
 > **Warning**
 > Large queries carry the risk of high egress fees when the data is transfered outside of us-west-2.  
 > As a matter of practice, it is recommended to keep the following in mind:
-> * Specify a start date on all queries.
+> * Specify a specific time range on all queries.
 > * Repeated queries will incur additional cost.
 > * Syncing the entire bucket is not advised (`aws s3 sync`).
 
