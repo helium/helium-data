@@ -8,6 +8,8 @@ We hope the community enjoys these new data tools and look forward to collaborat
 
 The following Jupyter notebook shows how to access Helium Foundations's S3 files and SQL query the S3 files using Spark DataFrames.
 
+Here is a [preview](https://github.com/helium/helium-data/blob/main/jupyter-community/deltalake.ipynb) of the Jupyter notebook.
+
 ## Prerequisites
 
 ### Python and SQL
