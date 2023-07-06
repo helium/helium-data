@@ -85,10 +85,10 @@ Click the 'run' button to run individual notebook code snippets.
 
 ## Known Issues
 
-The AWS x-amz-request-payer [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ObjectsinRequesterPaysBuckets.html) REST headers required to access Helium's S3 requester-pays buckets are currently not working for Jupyter's Delta Lake library.  There is a PR which fixes the issue:
+The AWS x-amz-request-payer [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ObjectsinRequesterPaysBuckets.html) REST headers required to access Helium's S3 requester-pays buckets are currently not working for Jupyter's Delta Lake library.  There is a [patch](https://issues.apache.org/jira/secure/attachment/12877218/HADOOP-14661.patch) which fixes the Spark [issue](https://issues.apache.org/jira/browse/HADOOP-14661) for Spark's 3.4.2 release.
 
 We are awaiting a Jupyter container image update to use Spark 3.4.2 / Hadoop 3.3.6 which fixes the issue.
-Spark's latest release is 3.4.1.  The ETA for 3.4.2 is unknown.
+Spark's latest release is 3.4.1.  The ETA for release 3.4.2 is unknown.
 
 [Jupyter Issue 1937](https://github.com/jupyter/docker-stacks/issues/1937)
 
