@@ -83,6 +83,21 @@ You can now view individual Jupyter cells.  The Jupyter notebook requires some p
 
 Click the 'run' button to run individual notebook code snippets.
 
+## Known Issues
+
+The AWS x-amz-request-payer [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ObjectsinRequesterPaysBuckets.html) REST headers required to access Helium's S3 requester-pays buckets are currently not working for Jupyter's Delta Lake library.  There is a [patch](https://issues.apache.org/jira/secure/attachment/12877218/HADOOP-14661.patch) which fixes the Spark [issue](https://issues.apache.org/jira/browse/HADOOP-14661) for Spark's 3.4.2 release.
+
+We are awaiting a Jupyter container image update to use Spark 3.4.2 / Hadoop 3.3.6 which fixes the issue.
+Spark's latest release is 3.4.1.  The ETA for release 3.4.2 is unknown.
+
+[Jupyter Issue 1937](https://github.com/jupyter/docker-stacks/issues/1937)
+
+In the meantime, as a work-around, users can copy the S3 files to their local file system.  This method is described in the 'Working with Local Files' notebook cell.
+
+We caution that Helium's Delta Lake bucket contains nearly 4TB of data.  At current AWS S3 egress rates of $0.09 per GB it will cost $360 to sync this entire bucket to your local system.  However users can greatly reduce their expenses by filtering the data sync to specific date ranges.
+
+Advanced use of 'AWS S3 sync' with filters is beyond the scope of this discussion.
+
 
 ## References
 
