@@ -83,6 +83,11 @@ You can now view individual Jupyter cells.  The Jupyter notebook requires some p
 
 Click the 'run' button to run individual notebook code snippets.
 
+## Known Issues
+
+Requester Pays headers are currently not working until the Jupyter notebook is updated to Spark 3.4.2 / Hadoop 3.3.6
+
+[Jupyter Issue 1937](https://github.com/jupyter/docker-stacks/issues/1937)
 
 ## References
 
