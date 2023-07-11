@@ -74,7 +74,7 @@ pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> Sch
             return SchemaField::new(
                 field_name.to_string(),
                 SchemaDataType::r#struct(SchemaTypeStruct::new(get_delta_schema(&m))),
-                false, // Protobuf does not support nulls
+                true,
                 HashMap::new(),
             );
         }
@@ -83,7 +83,7 @@ pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> Sch
     SchemaField::new(
         field_name.to_string(),
         SchemaDataType::primitive(field_type.to_string()),
-        false, // Protobuf does not support nulls
+        true,
         HashMap::new(),
     )
 }
@@ -100,9 +100,9 @@ pub fn get_delta_schema(descriptor: &MessageDescriptor) -> Vec<SchemaField> {
                         field_name.to_string(),
                         SchemaDataType::array(SchemaTypeArray::new(
                             Box::new(get_single_delta_schema(field_name, t).get_type().clone()),
-                            false, // Protobuf does not support nulls
+                            true,
                         )),
-                        false, // Protobuf does not support nulls
+                        true,
                         HashMap::new(),
                     );
                 }
