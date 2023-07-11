@@ -19,7 +19,7 @@ SELECT
     selected,
     base64(poc_id) as poc_id,
     struct(
-      from_epoch_millis(beacon_report.received_timestamp) as received_timestamp,
+      beacon_report.received_timestamp as received_timestamp,
       cast(beacon_report.location as decimal(23, 0)) location_h3,
       (beacon_report.hex_scale / 10000) as scale,
       b58encodeChecked(beacon_report.report.pub_key) as pub_key,
@@ -37,7 +37,7 @@ SELECT
       beacon_report.elevation as elevation_agl_m
      ) as beacon,
      struct(
-      from_epoch_millis(beacon_report.received_timestamp) as received_timestamp,
+      beacon_report.received_timestamp as received_timestamp,
       cast(witness.location as decimal(23, 0)) location_h3,
       b58encodeChecked(witness.report.pub_key) as pub_key,
       (witness.hex_scale / 10000) as scale,
