@@ -347,6 +347,7 @@ impl StructReflectBuilder {
 
 impl ReflectBuilder for StructReflectBuilder {
     fn append_value(&mut self, v: Option<ReflectValueRef>) {
+      println!("append_value {:?}", v);
         let message_ref = v
             .map(|i| i.to_message().expect("Not a message"))
             .expect("Messages can't be none");
@@ -498,6 +499,7 @@ pub fn to_record_batch(
     // Tuple of file name and message
     messages_with_files: Vec<(&str, &dyn MessageDyn)>,
     partition_timestamp_column: Option<String>,
+    partition_timestamp_divisor: u64,
 ) -> Result<RecordBatch> {
     let messages = messages_with_files.iter().map(|m| m.1).collect::<Vec<_>>();
     let files = messages_with_files.iter().map(|m| m.0).collect::<Vec<_>>();
@@ -520,7 +522,7 @@ pub fn to_record_batch(
                 .unwrap_or_else(|_| 0)
         });
         let dates = timestamps
-            .map(|t| i32::try_from(t / (1000 * 60 * 60 * 24)).context("Not an int32"))
+            .map(|t| i32::try_from(t / partition_timestamp_divisor).context("Not an int32"))
             .collect::<Result<Vec<i32>>>()?;
         let date_data: Arc<dyn Array> = Arc::new(Date32Array::from(dates));
 

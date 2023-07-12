@@ -66,6 +66,10 @@ struct Args {
     #[clap(long)]
     pub partition_timestamp_column: Option<String>,
 
+    /// Default assumes millis
+    #[clap(long, default_value = "86400000")]
+    pub partition_timestamp_date_divisor: u64,
+
     #[clap(long)]
     pub target_bucket: String,
     #[clap(long)]
@@ -299,6 +303,7 @@ async fn main() -> Result<()> {
                     .map(|m| (m.0.as_str(), m.1.as_ref()))
                     .collect(),
                 args.partition_timestamp_column.clone(),
+                args.partition_timestamp_date_divisor
             )?;
 
             writer.write(batch).await?;
