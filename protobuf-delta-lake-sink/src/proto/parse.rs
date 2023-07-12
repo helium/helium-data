@@ -347,16 +347,16 @@ impl StructReflectBuilder {
 
 impl ReflectBuilder for StructReflectBuilder {
     fn append_value(&mut self, v: Option<ReflectValueRef>) {
-      println!("append_value {:?}", v);
         let message_ref = v
-            .map(|i| i.to_message().expect("Not a message"))
-            .expect("Messages can't be none");
-        let message = &*message_ref;
+            .map(|i| {
+              i.to_message().expect("Not a message")
+            });
+        let message = message_ref.as_deref();
         for (index, field) in self.descriptor.fields().enumerate() {
             match field.runtime_field_type() {
                 protobuf::reflect::RuntimeFieldType::Singular(_) => {
                     let builder = self.builders.get_mut(index).unwrap();
-                    builder.append_value(field.get_singular(message))
+                    builder.append_value(message.and_then(|m| field.get_singular(m)))
                 }
                 protobuf::reflect::RuntimeFieldType::Repeated(_) => {
                     panic!("Repeated fields in a nested message are not supported")
