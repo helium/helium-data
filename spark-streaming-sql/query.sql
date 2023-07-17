@@ -55,5 +55,5 @@ SELECT
       witness.participant_side as invalid_participant_side,
       (witness.gain / 10) as gain_dbi,
       witness.elevation as elevation_agl_m
-    ) as witness    
+    ) as witness
 FROM raw
