@@ -53,7 +53,7 @@ object Main extends App {
       )
       .write
       .format("delta")
-      .mode("append")
+      .mode("complete")
       .save(sys.env.get("OUTPUT").get)
   } else {
     spark
