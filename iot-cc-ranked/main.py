@@ -1,9 +1,11 @@
-import h3
 import pyspark
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, expr
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import when
+from pyspark.sql.functions import sum
+from pyspark.sql.functions import lit
+
 
 from delta import *
 from delta.tables import DeltaTable
@@ -12,11 +14,16 @@ import shutil
 import pandas as pd
 import numpy as np
 
+from datetime import datetime, timedelta
 
-x1 = "631714807764183039"
-x2 = 631714807764183039
-h = '89283082837ffff'
-geo = h3.h3_to_geo(hex(x2))
+N_DAYS_AGO = 1
+
+today = datetime.now()    
+n_days_ago = today - timedelta(days=N_DAYS_AGO)
+print(f"today is {today}")
+print(f"24 hours past is {n_days_ago}")
+yesterday = n_days_ago.strftime('%Y-%m-%d')
+print(f"yesterday is {yesterday}")
 
 builder = SparkSession.builder.appName("DeltaLakeApp") \
     .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
@@ -39,7 +46,7 @@ gateways_uri="s3a://foundation-data-lake-requester-pays/bronze/iot_gateways_geo/
 geos = spark.read.format("delta").load(gateways_uri)
 
 rewards_uri="s3a://foundation-data-lake-requester-pays/silver/iot-reward-share/"
-partition = "date = '2023-07-25'"
+partition = f"date = '{yesterday}'"
 rewards = spark.read.format("delta").load(rewards_uri).where(partition).select("date", "gateway", "dc_transfer_amount_iot")
 rewards.show(10)
 print(f"rewards rows count : {rewards.count()}")
@@ -68,17 +75,18 @@ f3 = f2.drop("data_iot").dropna()
 joined = f3.withColumnRenamed('data_iot_2', 'data_iot')
 joined.describe().show()
 
-stats = joined.groupBy("country").sum("data_iot")
+stats = joined.select("date", "country", "data_iot").groupBy("country").sum("data_iot")
+stats = stats.withColumn("date", lit(yesterday))
 stats.show()
 
 order = stats.orderBy(col("sum(data_iot)").desc())
 order = order.withColumnRenamed('sum(data_iot)', 'sum')
 order.show(15)
 
-sum1 = order.select(sum("sum"))
-sum1.show()
-sum_total = sum1.head()[0]
-print(f"total is {sum_total}")
+df_sum = order.select(sum(order.sum).alias("the_sum"))
+df_sum.show()
+sum_total = df_sum.head()[0]
+print(f"sum_total is {sum_total}")
 
 def apply_percent_logic(df):
     return df.withColumn("percent",  df.sum * 100 / sum_total)
@@ -86,4 +94,7 @@ def apply_percent_logic(df):
 o2 = order.transform(apply_percent_logic)
 o2.show(80)
 
-print(geo)
+iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-ranked.parquet"
+o2.write.mode("overwrite").parquet(iot_ranked_uri)
+
+

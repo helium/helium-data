@@ -1,3 +1,3 @@
-!/#/bin/bash -x
+#!/bin/bash -x
 
-docker build -t iot-cc-ranked:latest
+docker build -t iot-cc-ranked:latest .
