@@ -95,17 +95,18 @@ o2.show(40)
 
 iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-ranked.parquet"
 
-# o3 = spark.read.parquet(iot_ranked_uri)
-# yesterday_date_rows = o3.filter(o3.date.contains(yesterday))
-# yesterday_count = yesterday_date_rows.count()
-# if (yesterday_count <= 0):
-#     o4 = o3.union(o2);
-# #    o4.write.mode("overwrite").parquet(iot_ranked_uri)
-# else:
-#     print(f"yesterday already written count is {yesterday_count}")
-#     exit()
+o3 = spark.read.parquet(iot_ranked_uri)
+o3.show(25)
 
-o4 = o2
+yesterday_date_rows = o3.filter(o3.date.contains(yesterday))
+yesterday_count = yesterday_date_rows.count()
+if (yesterday_count <= 0):
+    print(f"Will union yesterday and before")
+    o4 = o3.union(o2)
+else:
+    print(f"yesterday already written count is {yesterday_count}")
+    print("exiting")
+    exit()
 
 import logging
 import boto3
@@ -135,5 +136,3 @@ def upload_file(file_name, bucket, object_name=None):
     return True
 
 upload_file(ranked_name, "foundation-iot-metrics", ranked_name)
-
-
