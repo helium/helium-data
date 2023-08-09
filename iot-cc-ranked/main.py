@@ -83,18 +83,22 @@ order = stats.orderBy(col("sum(data_iot)").desc())
 order = order.withColumnRenamed('sum(data_iot)', 'sum')
 order.show(15)
 
-df_sum = order.select(sum(order.sum).alias("the_sum"))
-df_sum.show()
-sum_total = df_sum.head()[0]
+sum_total = order.select(sum(order.sum).alias("the_sum")).head()[0]
 print(f"sum_total is {sum_total}")
 
 def apply_percent_logic(df):
     return df.withColumn("percent",  df.sum * 100 / sum_total)
 
 o2 = order.transform(apply_percent_logic)
-o2.show(80)
+o2.show(40)
 
 iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-ranked.parquet"
-o2.write.mode("overwrite").parquet(iot_ranked_uri)
 
-
+o3 = spark.read.parquet(iot_ranked_uri)
+yesterday_date_rows = o3.filter(o3.date.contains(yesterday))
+yesterday_count = yesterday_date_rows.count()
+if (yesterday_count <= 0):
+    o4 = o3.union(o2);
+    o4.write.mode("overwrite").parquet(iot_ranked_uri)
+else:
+    print(f"yesterday already written count is {yesterday_count}")
