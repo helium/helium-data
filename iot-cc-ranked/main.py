@@ -16,6 +16,7 @@ import numpy as np
 
 from datetime import datetime, timedelta
 
+
 N_DAYS_AGO = 1
 
 today = datetime.now()    
@@ -94,11 +95,45 @@ o2.show(40)
 
 iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-ranked.parquet"
 
-o3 = spark.read.parquet(iot_ranked_uri)
-yesterday_date_rows = o3.filter(o3.date.contains(yesterday))
-yesterday_count = yesterday_date_rows.count()
-if (yesterday_count <= 0):
-    o4 = o3.union(o2);
-    o4.write.mode("overwrite").parquet(iot_ranked_uri)
-else:
-    print(f"yesterday already written count is {yesterday_count}")
+# o3 = spark.read.parquet(iot_ranked_uri)
+# yesterday_date_rows = o3.filter(o3.date.contains(yesterday))
+# yesterday_count = yesterday_date_rows.count()
+# if (yesterday_count <= 0):
+#     o4 = o3.union(o2);
+# #    o4.write.mode("overwrite").parquet(iot_ranked_uri)
+# else:
+#     print(f"yesterday already written count is {yesterday_count}")
+#     exit()
+
+o4 = o2
+
+import logging
+import boto3
+from botocore.exceptions import ClientError
+import os
+
+iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-trial.parquet"
+
+o5 = o4.toPandas()
+ranked_name = "iot-cc-ranked.parquet"
+o5.to_parquet(ranked_name)
+
+# Copied from https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html
+def upload_file(file_name, bucket, object_name=None):
+
+    # If S3 object_name was not specified, use file_name
+    if object_name is None:
+        object_name = os.path.basename(file_name)
+
+    # Upload the file
+    s3_client = boto3.client('s3')
+    try:
+        response = s3_client.upload_file(file_name, bucket, object_name)
+    except ClientError as e:
+        logging.error(e)
+        return False
+    return True
+
+upload_file(ranked_name, "foundation-iot-metrics", ranked_name)
+
+

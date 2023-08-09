@@ -15,9 +15,12 @@ RUN pip install --no-cache-dir h3
 RUN pip install --no-cache-dir pyogrio
 RUN pip install --no-cache-dir pycountry
 RUN pip install --no-cache-dir pandas
+RUN pip install --no-cache-dir pandas
+RUN pip install --no-cache-dir pyarrow
+RUN pip install --no-cache-dir fastparquet
+RUN pip install --no-cache-dir boto3
 
 #RUN mkdir -p /root/.ivy2/jars
-
 
 RUN wget https://repo1.maven.org/maven2/org/wildfly/openssl/wildfly-openssl/1.0.7.Final/wildfly-openssl-1.0.7.Final.jar
 RUN mv wildfly-openssl-1.0.7.Final.jar /opt/spark/jars
