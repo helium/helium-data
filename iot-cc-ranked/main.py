@@ -94,6 +94,7 @@ o2 = order.transform(apply_percent_logic)
 o2.show(40)
 
 iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-ranked.parquet"
+ranked_name = "iot-cc-ranked.parquet"
 
 o3 = spark.read.parquet(iot_ranked_uri)
 o3.show(25)
@@ -113,10 +114,7 @@ import boto3
 from botocore.exceptions import ClientError
 import os
 
-iot_ranked_uri="s3a://foundation-iot-metrics/iot-cc-trial.parquet"
-
 o5 = o4.toPandas()
-ranked_name = "iot-cc-ranked.parquet"
 o5.to_parquet(ranked_name)
 
 # Copied from https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-uploading-files.html
