@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Scala",
+      "name": "Run IOT Rewards Silver",
       "type": "scala",
       "request": "launch",
       "mainClass": "Main",
@@ -16,12 +16,58 @@
         "SPARK_HADOOP_FS_S3A_IMPL": "org.apache.hadoop.fs.s3a.S3AFileSystem",
         "SPARK_HADOOP_FS_S3A_CONNECTION_SSL_ENABLED": "false",
         "SPARK_HADOOP_FS_S3A_AWS_CREDENTIALS_PROVIDER": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
-        "TABLE_LORA_POC_V1": "s3a://delta/bronze/iot_poc_v18",
+        "TABLE_IOT_REWARD_SHARE": "s3a://delta/bronze/iot_reward_share",
         "SPARK_DATABRICKS_DELTA_AUTOCOMPACT_ENABLED": "true",
         "PARTITION_BY": "date",
-        "CHECKPOINT": "s3a://delta/checkpoints/test11",
-        "OUTPUT": "s3a://delta/silver/test11",
-        "QUERY_PATH": "./query.sql"
+        "CHECKPOINT": "s3a://delta/checkpoints/iot-hotspot-rewards",
+        "OUTPUT": "s3a://delta/silver/iot-hotspot-rewards",
+        "QUERY_PATH": "./test-queries/iot-hotspot-rewards.sql",
+      }
+    },
+    {
+      "name": "Run MOBILE Rewards Silver",
+      "type": "scala",
+      "request": "launch",
+      "mainClass": "Main",
+      "jvmOptions": ["--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"],
+      "env": {
+        "SPARK_MASTER": "local[*]",
+        "SPARK_HADOOP_FS_S3A_ENDPOINT": "localhost:9000",
+        "SPARK_HADOOP_FS_S3A_ACCESS_KEY": "minioadmin",
+        "SPARK_HADOOP_FS_S3A_SECRET_KEY": "minioadmin",
+        "SPARK_HADOOP_FS_S3A_PATH_STYLE_ACCESS": "true",
+        "SPARK_HADOOP_FS_S3A_IMPL": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+        "SPARK_HADOOP_FS_S3A_CONNECTION_SSL_ENABLED": "false",
+        "SPARK_HADOOP_FS_S3A_AWS_CREDENTIALS_PROVIDER": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+        "TABLE_MOBILE_REWARD_SHARE": "s3a://delta/bronze/mobile_reward_share",
+        "SPARK_DATABRICKS_DELTA_AUTOCOMPACT_ENABLED": "true",
+        "PARTITION_BY": "date",
+        "CHECKPOINT": "s3a://delta/checkpoints/mobile-hotspot-rewards",
+        "OUTPUT": "s3a://delta/silver/mobile-hotspot-rewards",
+        "QUERY_PATH": "./test-queries/mobile-hotspot-rewards.sql",
+      }
+    },
+    {
+      "name": "Run Hotspot Rewards Gold",
+      "type": "scala",
+      "request": "launch",
+      "mainClass": "Main",
+      "jvmOptions": ["--add-exports", "java.base/sun.nio.ch=ALL-UNNAMED"],
+      "env": {
+        "SPARK_MASTER": "local[*]",
+        "SPARK_HADOOP_FS_S3A_ENDPOINT": "localhost:9000",
+        "SPARK_HADOOP_FS_S3A_ACCESS_KEY": "minioadmin",
+        "SPARK_HADOOP_FS_S3A_SECRET_KEY": "minioadmin",
+        "SPARK_HADOOP_FS_S3A_PATH_STYLE_ACCESS": "true",
+        "SPARK_HADOOP_FS_S3A_IMPL": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+        "SPARK_HADOOP_FS_S3A_CONNECTION_SSL_ENABLED": "false",
+        "SPARK_HADOOP_FS_S3A_AWS_CREDENTIALS_PROVIDER": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+        "TABLE_IOT_HOTSPOT_REWARDS": "s3a://delta/silver/iot-hotspot-rewards",
+        "TABLE_MOBILE_HOTSPOT_REWARDS": "s3a://delta/silver/mobile-hotspot-rewards",
+        "SPARK_DATABRICKS_DELTA_AUTOCOMPACT_ENABLED": "true",
+        "OUTPUT": "s3a://delta/gold/recently-rewarded-hotspots",
+        "QUERY_PATH": "./test-queries/hotspot-rewards.sql",
+        "BATCH_PROCESSING": "true"
       }
     }
   ]
