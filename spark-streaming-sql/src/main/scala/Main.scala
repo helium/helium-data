@@ -4,6 +4,7 @@ import org.apache.spark.streaming.StreamingContext._ // not necessary since Spar
 import org.apache.spark.sql.SparkSession
 import io.delta.implicits._
 import scala.io.Source
+import org.apache.spark.sql.streaming.Trigger
 
 object Main extends App {
   def createSparkConfFromEnv(): SparkConf = {
@@ -43,6 +44,12 @@ object Main extends App {
   val isBatch = sys.env.get("BATCH_PROCESSING").getOrElse("false").toBoolean
   val config = createSparkConfFromEnv()
   val spark = SparkSession.builder().config(config).getOrCreate()
+  val trigger = sys.env.getOrElse("TRIGGER", "ProcessingTime") match {
+    case "ProcessingTime" => Trigger.ProcessingTime(sys.env.getOrElse("TRIGGER_INTERVAL", "4 hours"))
+    case "AvailableNow"    => Trigger.AvailableNow()
+    case "Continuous" =>
+      Trigger.Continuous(sys.env.get("TRIGGER_INTERVAL").get)
+  }
   B58.register(spark)
   TimestampExt.register(spark)
   createTablesFromEnv(spark, isBatch)
@@ -65,6 +72,7 @@ object Main extends App {
       .outputMode("append")
       .partitionBy(sys.env.get("PARTITION_BY").get.split(","): _*)
       .option("checkpointLocation", sys.env.get("CHECKPOINT").get)
+      .trigger(trigger)
       .start(sys.env.get("OUTPUT").get)
       .awaitTermination()
   }
