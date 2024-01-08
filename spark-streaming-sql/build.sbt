@@ -1,7 +1,7 @@
 scalaVersion := "2.13.8"
 name := "spark-streaming-sql"
 organization := "helium"
-version := "1.0.2"
+version := "1.0.3"
 
 val sparkVersion = "3.4.0"
 
