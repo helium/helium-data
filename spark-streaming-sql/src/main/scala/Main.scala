@@ -72,6 +72,7 @@ object Main extends App {
       .outputMode("append")
       .partitionBy(sys.env.get("PARTITION_BY").get.split(","): _*)
       .option("checkpointLocation", sys.env.get("CHECKPOINT").get)
+      .option("startingTimestamp", sys.env.getOrElse("STARTING_TIMESTAMP", "2017-01-01"))
       .trigger(trigger)
       .start(sys.env.get("OUTPUT").get)
       .awaitTermination()
