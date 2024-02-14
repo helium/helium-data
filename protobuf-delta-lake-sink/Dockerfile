@@ -8,6 +8,7 @@ WORKDIR /app
 
 # Copy the Cargo files and install dependencies
 COPY Cargo.toml ./
+COPY Cargo.lock ./
 
 # Do a build before we add the source to cache the compiled deps
 RUN mkdir ./src && echo 'fn main() { println!("Dummy!"); }' > ./src/main.rs
