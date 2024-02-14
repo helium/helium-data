@@ -22,7 +22,7 @@ COPY src ./src
 RUN touch -a -m ./src/main.rs
 RUN cargo build --release
 
-FROM debian:bullseye-slim
+FROM rust:1.75.0
 RUN apt-get update && apt-get install -y protobuf-compiler ca-certificates openssl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/protobuf-delta-lake-sink /app/protobuf-delta-lake-sink
 
