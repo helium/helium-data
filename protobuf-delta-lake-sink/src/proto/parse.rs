@@ -1,4 +1,6 @@
 use anyhow::{bail, Context, Result};
+use datafusion::arrow::buffer::{Buffer, NullBuffer};
+use datafusion::arrow::datatypes::FieldRef;
 use deltalake::arrow::array::StringArray;
 use deltalake::arrow::datatypes::{Field, Fields};
 use deltalake::{
@@ -13,7 +15,8 @@ use deltalake::{
     },
     Schema, SchemaTypeStruct,
 };
-use protobuf::reflect::{EnumDescriptor, ReflectValueBox};
+use protobuf::reflect::{EnumDescriptor, ReflectRepeatedRef, ReflectValueBox};
+use protobuf::well_known_types::struct_::value;
 use protobuf::{
     reflect::{FieldDescriptor, MessageDescriptor, ReflectValueRef, RuntimeType},
     MessageDyn,
@@ -24,6 +27,7 @@ use super::get_delta_schema;
 
 trait ReflectBuilder: ArrayBuilder {
     fn append_value(&mut self, v: Option<ReflectValueRef>);
+    fn append_repeated_value(&mut self, v: Option<ReflectRepeatedRef>);
 }
 
 macro_rules! make_builder_wrapper {
@@ -75,6 +79,10 @@ impl ReflectBuilder for BinaryReflectBuilder {
                 .unwrap_or_default(),
         )
     }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
 }
 
 impl ReflectBuilder for StringReflectBuilder {
@@ -88,6 +96,10 @@ impl ReflectBuilder for StringReflectBuilder {
             .unwrap_or_default(),
         )
     }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
 }
 
 impl ReflectBuilder for BoolReflectBuilder {
@@ -96,6 +108,10 @@ impl ReflectBuilder for BoolReflectBuilder {
             v.map(|i| i.to_bool().expect("Not a boolean"))
                 .unwrap_or_default(),
         )
+    }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
     }
 }
 
@@ -147,6 +163,10 @@ impl ReflectBuilder for EnumReflectBuilder {
             .unwrap_or_default(),
         )
     }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
 }
 
 struct PrimitiveReflectBuilder<T: ArrowPrimitiveType> {
@@ -190,6 +210,10 @@ impl ReflectBuilder for PrimitiveReflectBuilder<Int32Type> {
                 .unwrap_or_default(),
         );
     }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Int64Type> {
@@ -201,6 +225,10 @@ impl ReflectBuilder for PrimitiveReflectBuilder<Int64Type> {
             })
             .unwrap_or_default(),
         );
+    }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
     }
 }
 
@@ -263,6 +291,10 @@ impl ReflectBuilder for U64ReflectBuilder {
                 .unwrap_or_default(),
         );
     }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Float32Type> {
@@ -272,6 +304,10 @@ impl ReflectBuilder for PrimitiveReflectBuilder<Float32Type> {
                 .unwrap_or_default(),
         );
     }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
 }
 
 impl ReflectBuilder for PrimitiveReflectBuilder<Float64Type> {
@@ -280,6 +316,79 @@ impl ReflectBuilder for PrimitiveReflectBuilder<Float64Type> {
             v.map(|i| i.to_f64().expect("Not a f64"))
                 .unwrap_or_default(),
         );
+    }
+
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
+    }
+}
+
+struct RepeatedReflectBuilder {
+    pub builder: Box<dyn ReflectArrayBuilder>,
+    pub offsets: BufferBuilder<i32>,
+    pub t: RuntimeType,
+    pub capacity: usize,
+    pub nulls: BooleanBuilder,
+}
+
+impl ArrayBuilder for RepeatedReflectBuilder {
+    fn len(&self) -> usize {
+        self.capacity
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn finish(&mut self) -> ArrayRef {
+        let field = Arc::new(Field::new("item", runtime_type_to_data_type(&self.t), true));
+        let data_type = DataType::List(field);
+        let values_arr = self.builder.finish();
+        let values_data = values_arr.to_data();
+        let array_data_builder = ArrayData::builder(data_type)
+            .len(self.capacity)
+            .add_buffer(self.offsets.finish())
+            .add_child_data(values_data)
+            .null_bit_buffer(None);
+            // .null_bit_buffer(Some(self.nulls.finish().values().clone().into_inner()));
+        let array_data = unsafe { array_data_builder.build_unchecked() };
+        Arc::new(GenericListArray::<i32>::from(array_data))
+    }
+
+    fn finish_cloned(&self) -> ArrayRef {
+        unimplemented!()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_box_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
+
+impl ReflectBuilder for RepeatedReflectBuilder {
+    fn append_value(&mut self, _: Option<ReflectValueRef>) {
+        panic!("Operation not supported!");
+    }
+    fn append_repeated_value(&mut self, v: Option<ReflectRepeatedRef>) {
+        let messages = v
+            .iter()
+            .flat_map(|i| i.into_iter().collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+
+        // self.nulls.append_value(v.is_none());
+
+        for value in messages.iter() {
+            self.builder.append_value(Some(value.clone()));
+        }
+
+        self.offsets.append(i32::try_from(self.builder.len()).unwrap());
     }
 }
 
@@ -347,10 +456,7 @@ impl StructReflectBuilder {
 
 impl ReflectBuilder for StructReflectBuilder {
     fn append_value(&mut self, v: Option<ReflectValueRef>) {
-        let message_ref = v
-            .map(|i| {
-              i.to_message().expect("Not a message")
-            });
+        let message_ref = v.map(|i| i.to_message().expect("Not a message"));
         let message = message_ref.as_deref();
         for (index, field) in self.descriptor.fields().enumerate() {
             match field.runtime_field_type() {
@@ -359,13 +465,17 @@ impl ReflectBuilder for StructReflectBuilder {
                     builder.append_value(message.and_then(|m| field.get_singular(m)))
                 }
                 protobuf::reflect::RuntimeFieldType::Repeated(_) => {
-                  // Do nothing
+                    let builder = self.builders.get_mut(index).unwrap();
+                    builder.append_repeated_value(message.map(|m| field.get_repeated(m)))
                 }
                 protobuf::reflect::RuntimeFieldType::Map(_, _) => {
                     panic!("Map fields are not supported")
                 }
             };
         }
+    }
+    fn append_repeated_value(&mut self, _: Option<ReflectRepeatedRef>) {
+        panic!("Operation not supported");
     }
 }
 
@@ -382,7 +492,7 @@ fn runtime_type_to_data_type(value: &RuntimeType) -> DataType {
         RuntimeType::VecU8 => DataType::Binary,
         RuntimeType::Enum(_) => DataType::Binary,
         RuntimeType::Message(m) => {
-            let fields = get_delta_schema(m, true);
+            let fields = get_delta_schema(m);
             let schema = <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(
                 &SchemaTypeStruct::new(fields),
             )
@@ -428,20 +538,31 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Result<Box<dyn ReflectArrayB
             enum_descriptor: enum_descriptor.clone(),
         }),
         RuntimeType::Message(m) => {
-            let schema = Schema::new(get_delta_schema(m, true));
+            let schema = Schema::new(get_delta_schema(m));
             let arrow_schema =
                 <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(&schema)?;
             let builders = m
                 .clone()
                 .fields()
                 .flat_map(|field| match field.runtime_field_type() {
-                    protobuf::reflect::RuntimeFieldType::Singular(t) => Some(get_builder(&t, capacity)),
-                    protobuf::reflect::RuntimeFieldType::Repeated(_) => {
-                        None
+                    protobuf::reflect::RuntimeFieldType::Singular(t) => {
+                        Some(get_builder(&t, capacity))
                     }
-                    protobuf::reflect::RuntimeFieldType::Map(_, _) => {
-                        None
+                    protobuf::reflect::RuntimeFieldType::Repeated(t) => {
+                      let mut offsets =  BufferBuilder::<i32>::new(0);
+                      offsets.append(0);
+                        let builder: Box<dyn ReflectArrayBuilder> =
+                            Box::new(RepeatedReflectBuilder {
+                                // TODO: This sets a max of 50 elements per array
+                                builder: get_builder(&t, 0).ok().unwrap(),
+                                offsets,
+                                t,
+                                capacity,
+                                nulls: BooleanBuilder::new()
+                            });
+                        Some(Ok(builder))
                     }
+                    protobuf::reflect::RuntimeFieldType::Map(_, _) => None,
                 })
                 .collect::<Result<Vec<Box<dyn ReflectArrayBuilder>>>>()?;
             Box::new(StructReflectBuilder {

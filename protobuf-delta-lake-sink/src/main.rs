@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
         args.source_proto_name,
     )
     .await?;
-    let mut delta_fields = get_delta_schema(&descriptor, false);
+    let mut delta_fields = get_delta_schema(&descriptor);
     if args.partition_timestamp_column.is_some() {
         let date_field = SchemaField::new(
             "date".to_string(),
