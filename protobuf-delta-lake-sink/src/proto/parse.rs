@@ -359,7 +359,7 @@ impl ReflectBuilder for StructReflectBuilder {
                     builder.append_value(message.and_then(|m| field.get_singular(m)))
                 }
                 protobuf::reflect::RuntimeFieldType::Repeated(_) => {
-                    panic!("Repeated fields in a nested message are not supported")
+                  // Do nothing
                 }
                 protobuf::reflect::RuntimeFieldType::Map(_, _) => {
                     panic!("Map fields are not supported")
@@ -382,7 +382,7 @@ fn runtime_type_to_data_type(value: &RuntimeType) -> DataType {
         RuntimeType::VecU8 => DataType::Binary,
         RuntimeType::Enum(_) => DataType::Binary,
         RuntimeType::Message(m) => {
-            let fields = get_delta_schema(m);
+            let fields = get_delta_schema(m, true);
             let schema = <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(
                 &SchemaTypeStruct::new(fields),
             )
@@ -428,19 +428,19 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Result<Box<dyn ReflectArrayB
             enum_descriptor: enum_descriptor.clone(),
         }),
         RuntimeType::Message(m) => {
-            let schema = Schema::new(get_delta_schema(m));
+            let schema = Schema::new(get_delta_schema(m, true));
             let arrow_schema =
                 <deltalake::arrow::datatypes::Schema as TryFrom<&Schema>>::try_from(&schema)?;
             let builders = m
                 .clone()
                 .fields()
-                .map(|field| match field.runtime_field_type() {
-                    protobuf::reflect::RuntimeFieldType::Singular(t) => get_builder(&t, capacity),
+                .flat_map(|field| match field.runtime_field_type() {
+                    protobuf::reflect::RuntimeFieldType::Singular(t) => Some(get_builder(&t, capacity)),
                     protobuf::reflect::RuntimeFieldType::Repeated(_) => {
-                        bail!("Repeated fields in a nested message are not supported")
+                        None
                     }
                     protobuf::reflect::RuntimeFieldType::Map(_, _) => {
-                        bail!("Map fields are not supported")
+                        None
                     }
                 })
                 .collect::<Result<Vec<Box<dyn ReflectArrayBuilder>>>>()?;
