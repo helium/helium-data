@@ -1,6 +1,4 @@
 use anyhow::{bail, Context, Result};
-use datafusion::arrow::buffer::{Buffer, NullBuffer};
-use datafusion::arrow::datatypes::FieldRef;
 use deltalake::arrow::array::StringArray;
 use deltalake::arrow::datatypes::{Field, Fields};
 use deltalake::{
@@ -16,7 +14,6 @@ use deltalake::{
     Schema, SchemaTypeStruct,
 };
 use protobuf::reflect::{EnumDescriptor, ReflectRepeatedRef, ReflectValueBox};
-use protobuf::well_known_types::struct_::value;
 use protobuf::{
     reflect::{FieldDescriptor, MessageDescriptor, ReflectValueRef, RuntimeType},
     MessageDyn,
@@ -328,7 +325,23 @@ struct RepeatedReflectBuilder {
     pub offsets: BufferBuilder<i32>,
     pub t: RuntimeType,
     pub capacity: usize,
-    pub nulls: BooleanBuilder,
+}
+
+impl RepeatedReflectBuilder {
+    fn new(
+        capacity: usize,
+        builder: Box<dyn ReflectArrayBuilder>,
+        t: RuntimeType,
+    ) -> RepeatedReflectBuilder {
+        let mut offsets = BufferBuilder::<i32>::new(0);
+        offsets.append(0);
+        RepeatedReflectBuilder {
+            builder,
+            offsets,
+            capacity,
+            t,
+        }
+    }
 }
 
 impl ArrayBuilder for RepeatedReflectBuilder {
@@ -350,7 +363,7 @@ impl ArrayBuilder for RepeatedReflectBuilder {
             .add_buffer(self.offsets.finish())
             .add_child_data(values_data)
             .null_bit_buffer(None);
-            // .null_bit_buffer(Some(self.nulls.finish().values().clone().into_inner()));
+        // .null_bit_buffer(Some(self.nulls.finish().values().clone().into_inner()));
         let array_data = unsafe { array_data_builder.build_unchecked() };
         Arc::new(GenericListArray::<i32>::from(array_data))
     }
@@ -388,7 +401,8 @@ impl ReflectBuilder for RepeatedReflectBuilder {
             self.builder.append_value(Some(value.clone()));
         }
 
-        self.offsets.append(i32::try_from(self.builder.len()).unwrap());
+        self.offsets
+            .append(i32::try_from(self.builder.len()).unwrap());
     }
 }
 
@@ -549,17 +563,12 @@ fn get_builder(t: &RuntimeType, capacity: usize) -> Result<Box<dyn ReflectArrayB
                         Some(get_builder(&t, capacity))
                     }
                     protobuf::reflect::RuntimeFieldType::Repeated(t) => {
-                      let mut offsets =  BufferBuilder::<i32>::new(0);
-                      offsets.append(0);
                         let builder: Box<dyn ReflectArrayBuilder> =
-                            Box::new(RepeatedReflectBuilder {
-                                // TODO: This sets a max of 50 elements per array
-                                builder: get_builder(&t, 0).ok().unwrap(),
-                                offsets,
-                                t,
+                            Box::new(RepeatedReflectBuilder::new(
                                 capacity,
-                                nulls: BooleanBuilder::new()
-                            });
+                                get_builder(&t, 0).ok().unwrap(),
+                                t,
+                            ));
                         Some(Ok(builder))
                     }
                     protobuf::reflect::RuntimeFieldType::Map(_, _) => None,

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use chrono::{NaiveDateTime, Utc};
 use clap::Parser;
-use datafusion::{arrow::array::StringArray, common::delta};
+use datafusion::arrow::array::StringArray;
 use deltalake::{
     action::{self, Action, CommitInfo, SaveMode},
     checkpoints, crate_version,
