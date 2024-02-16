@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use chrono::{NaiveDateTime, Utc};
 use clap::Parser;
-use datafusion::{arrow::array::StringArray, common::delta};
+use datafusion::arrow::array::StringArray;
 use deltalake::{
     action::{self, Action, CommitInfo, SaveMode},
     checkpoints, crate_version,
@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
         args.source_proto_name,
     )
     .await?;
-    let mut delta_fields = get_delta_schema(&descriptor, false);
+    let mut delta_fields = get_delta_schema(&descriptor);
     if args.partition_timestamp_column.is_some() {
         let date_field = SchemaField::new(
             "date".to_string(),

@@ -73,7 +73,7 @@ pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> Sch
         protobuf::reflect::RuntimeType::Message(m) => {
             return SchemaField::new(
                 field_name.to_string(),
-                SchemaDataType::r#struct(SchemaTypeStruct::new(get_delta_schema(&m, true))),
+                SchemaDataType::r#struct(SchemaTypeStruct::new(get_delta_schema(&m))),
                 true,
                 HashMap::new(),
             );
@@ -88,14 +88,14 @@ pub fn get_single_delta_schema(field_name: &str, field_type: RuntimeType) -> Sch
     )
 }
 
-pub fn get_delta_schema(descriptor: &MessageDescriptor, nested: bool) -> Vec<SchemaField> {
+pub fn get_delta_schema(descriptor: &MessageDescriptor) -> Vec<SchemaField> {
     descriptor
         .fields()
         .flat_map(|f| {
             let field_name = f.name();
             let field_type = match f.runtime_field_type() {
                 protobuf::reflect::RuntimeFieldType::Singular(t) => Some(t),
-                protobuf::reflect::RuntimeFieldType::Repeated(t) if !nested => {
+                protobuf::reflect::RuntimeFieldType::Repeated(t) => {
                     return Some(SchemaField::new(
                         field_name.to_string(),
                         SchemaDataType::array(SchemaTypeArray::new(
@@ -106,7 +106,7 @@ pub fn get_delta_schema(descriptor: &MessageDescriptor, nested: bool) -> Vec<Sch
                         HashMap::new(),
                     ));
                 }
-                _ => None
+                _ => None,
             };
             field_type.map(|t| get_single_delta_schema(field_name, t))
         })
