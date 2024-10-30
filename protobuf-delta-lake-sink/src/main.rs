@@ -1,3 +1,8 @@
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
+
 use anyhow::{anyhow, Context, Result};
 use chrono::{NaiveDateTime, Utc};
 use clap::Parser;
@@ -16,10 +21,6 @@ use file_store::Settings;
 use futures::stream::{self, StreamExt};
 use protobuf::CodedInputStream;
 use serde_json::Value;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
 pub use store::*;
 
 use crate::{
@@ -189,7 +190,8 @@ async fn main() -> Result<()> {
             vec!["date".to_string()],
             HashMap::new(),
         );
-        let meta = action::MetaData::try_from(metadata)?;
+        let mut meta = action::MetaData::try_from(metadata)?;
+        meta.id = table.get_metadata()?.id.clone();
         let actions = vec![Action::metaData(meta)];
         let storage = table.object_store();
         commit(storage.as_ref(), &actions, &table.state).await?;
